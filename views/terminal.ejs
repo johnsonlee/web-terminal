@@ -1,0 +1,61 @@
+<html>
+    <head>
+        <title><%- title %></title>
+        <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+        <script type="text/javascript" src="/require.js"></script>
+        <style>
+            * {
+                padding: 0px;
+                margin: 0px;
+            }
+
+            html {
+                height: 100%;
+            }
+
+            body {
+                height: 100%;
+            }
+
+            .cursor {
+                height: 14px;
+                position: absolute;
+                background-color: white;
+            }
+
+            .cursor.blink {
+                opacity : 0;
+            }
+
+            .cursor.mask {
+                outline: 1px solid white;
+                background-color: transparent;
+            }
+
+            .terminal-container {
+                overflow: hidden;
+                position: relative;
+            }
+
+            .terminal {
+                color: #fff;
+                font-family: Courier, Courier New;
+                font-size: 12pt;
+                overflow-x: hidden;
+                overflow-y: visible;
+                background-color: black;
+            }
+
+            .terminal > div {
+                white-space: pre;
+            }
+        </style>
+        <script type="text/javascript">
+            require(['www/terminal'], function(Terminal) {
+                new Terminal().run(document.body);
+            });
+        </script>
+    </head>
+    <body>
+    </body>
+</html>
