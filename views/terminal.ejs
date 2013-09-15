@@ -47,12 +47,14 @@
             }
 
             .terminal > div {
+                height: 17px;
                 white-space: pre;
+                border-bottom: 1px dotted #111111;
             }
         </style>
         <script type="text/javascript">
-            require(['www/terminal'], function(Terminal) {
-                new Terminal().run(document.body);
+            require(['www/terminal'], function(WebTerminal) {
+                new WebTerminal().start(location.protocol + '//' + location.host, document.body);
             });
         </script>
     </head>

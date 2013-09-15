@@ -6,6 +6,7 @@
 var express = require('express')
   , http = require('http')
   , path = require('path')
+  , pty = require('pty.js')
   , socket = require('socket.io')
   , routes = require('./routes')
   , terminal = require('./routes/terminal');
@@ -34,12 +35,31 @@ var httpServer = http.createServer(app);
 var socketManager = socket.listen(httpServer);
 
 socketManager.sockets.on('connection', function(socket) {
+    var bash = pty.spawn('bash', [], {
+        name : 'xterm-color',
+        cols : 80,
+        rows : 30,
+        cwd  : process.env.HOME,
+        env  : process.env,
+    });
+
+    bash.on('data', function(data) {
+        console.log(data);
+
+        socket.emit('output', {
+            message : data,
+        });
+    });
+
     socket.on('resize', function(data) {
-        console.log('resize pty: ' + data.cols + 'x' + data.rows);
+        console.log('resize terminal: ' + data.cols + 'x' + data.rows);
     });
 
     socket.on('send', function(data) {
         console.log('received data: ' + JSON.stringify(data));
+
+        bash.write(data);
+        bash.write('\r');
     });
 });
 

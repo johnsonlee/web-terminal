@@ -1,51 +1,128 @@
 define(function(require, exports, module) {
 
-    var Iterator = function(iterable) {
-        var $iterable = iterable;
-        var $cursor = 0;
+    var Graphics = require('www/graphics');
+    var AnsiParser = require('www/ansi');
+    var StringBuffer = require('www/stringbuffer');
 
-        this.previous = function() {
-            if ($cursor <= 0)
-                return null;
-
-            return $iterable[--$cursor];
-        };
-
-        this.next = function() {
-            if ($cursor >= $iterable.length)
-                return null;
-
-            return $iterable[++$cursor];
-        };
-
-        this.get = function() {
-            return $iterable[$cursor];
-        };
+    var font = {
+        style  : 'normal',
+        size   : '12pt',
+        family : 'Courier, Courier New',
     };
 
-    var Terminal = function(options) {
-        options = options || {};
-        options.user = options.user || 'anonymous';
-
+    /**
+     * Web Terminal
+     */
+    var WebTerminal = function() {
         var $this = this;
+        var $col = 0;
+        var $row = 0;
         var $cols = 0;
-        var $text = '';
-        var $height = 0;
-        var $fontSize = '12pt';
-        var $history = [];
-        var $cursorPosition = 0;
-        var $fontFamily = 'Courier, Courier New';
-        var $canvas = document.createElement('canvas');
+        var $rows = 0;
+        var $parser = new AnsiParser();
+        var $stdin = new StringBuffer();
+        var $stdout = new StringBuffer();
         var $cursor = document.createElement('DIV');
         var $terminal = document.createElement('DIV');
         var $container = document.createElement('DIV');
-        var $graphics = $canvas.getContext('2d');
-        var $session = new Iterator($history);
-        var $mode = options.user == 'root' ? '#' : '$';
-        var $prompt = options.user + '@' + location.hostname + ':~' + $mode + ' ';
-        var socket = io.connect(location.protocol + '//' + location.host);
+        var $connection = null;
+        var $handlers = {
+            /**
+             * BACKSPACE
+             */
+            '8'  : function(event) {
+                var c = $col - 1;
 
-        $graphics.font = $fontSize + ' ' + $fontFamily;
+                $col = ((c + $cols) % $cols) || $cols - 1;
+                $row -= Math.floor(($cols - c) / $cols);
+                updateCursor.call(this);
+            },
+
+            /**
+             * ENTER
+             */
+            '13' : function(event) {
+                $connection.emit('send', {
+                    message : $stdin.data,
+                });
+
+                $stdin.clear();
+                $row++;
+                updateUI.call(this);
+                $terminal.scrollByLines(1);
+            },
+
+            /**
+             * ESC
+             */
+            '23' : function(event) {
+            },
+
+            /**
+             * SPACE
+             */
+            '32' : function(event) {
+                var c = $col + 1;
+
+                $col = c % $cols;
+                $row += Math.floor(c / $cols);
+                updateCursor.call(this);
+            },
+
+            /**
+             * END
+             */
+            '35' : function(event) {
+                $col = $cols;
+                updateCursor.call(this);
+            },
+
+            /**
+             * HOME
+             */
+            '36' : function(event) {
+                $col = 0;
+                updateCursor.call(this);
+            },
+
+            /**
+             * LEFT
+             */
+            '37' : function(event) {
+                $col = Math.max(0, $col - 1);
+                updateCursor.call(this);
+            },
+
+            /**
+             * UP
+             */
+            '38' : function(event) {
+                $row = Math.max(0, $row - 1);
+                updateCursor.call(this);
+            },
+
+            /**
+             * RIGHT
+             */
+            '39' : function(event) {
+                $col = Math.min($cols, $col + 1);
+                updateCursor.call(this);
+            },
+
+            /**
+             * DOWN
+             */
+            '40' : function(event) {
+                $row = Math.min($rows, $row + 1);
+                updateCursor.call(this);
+            },
+
+            /**
+             * DELETE
+             */
+            '46' : function(event) {
+            },
+        };
 
         Object.defineProperty(this, 'width', {
             get : function() {
@@ -61,240 +138,60 @@ define(function(require, exports, module) {
 
         Object.defineProperty(this, 'rows', {
             get : function() {
-                return $terminal.childNodes.length;
+                return $rows;
             }
         });
 
         Object.defineProperty(this, 'columns', {
             get : function() {
-                return Math.floor(this.width / this.columnWidth);
+                return $cols;
             }
         });
 
-        Object.defineProperty(this, 'columnWidth', {
-            get : function() {
-                return $graphics.measureText(' ').width;
-            }
-        });
+        /**
+         * Start this web terminal
+         * 
+         * @param url {@link String}
+         *           Connection URL
+         * @param container {@link HTMLElement}
+         *           DOM container of this terminal
+         */
+        this.start = function(url, container) {
+            var $this = this;
 
-        Object.defineProperty(this, 'lineHeight', {
-            get : function() {
-                return $terminal.firstChild.offsetHeight;
-            }
-        });
-
-        Object.defineProperty(this, 'session', {
-            value : $session,
-            writable : false,
-        });
-
-        this.resize = function() {
-            var styles = [];
-            var size = {
-                width : this.width,
-                height : this.height
-            };
-
-            console.log('Web Terminal: ' + this.width + 'x' + this.height);
-
-            $container.style.width = $container.offsetParent.clientWidth;
-            $container.style.height = $container.offsetParent.clientHeight;
-
-            $cursor.style.width = this.columnWidth + 'px';
-
-            $terminal.style.width = this.width + 'px';
-            $terminal.style.height = this.height + 'px';
-        };
-
-        this.clear = function() {
-            $text = '';
-            this.removeAllLine();
-        };
-
-        this.moveCursor = function(row, col) {
-            var x = this.columnWidth * col;
-            var y = this.lineHeight * (row - 1);
-
-            $cursor.style.top = (y - $terminal.scrollTop) + 'px';
-            $cursor.style.left = x + 'px';
-            $cursor.style.height = $terminal.firstChild.offsetHeight;
-
-            console.log('Move To: (' + x + ',' + y + ')');
-        };
-
-        this.moveCursorToHome = function(row) {
-            $cursorPosition = $prompt.length;
-            this.updateCursor();
-        };
-
-        this.moveCursorToEnd = function() {
-            $cursorPosition = $terminal.lastChild.textContent.length;
-            this.updateCursor();
-        };
-
-        this.moveCursorByColumns = function(delta) {
-            var left = $cursor.style.left.replace('px', '');
-            var x = parseInt(left);
-
-            if (delta < 0 && x <= $prompt.length * this.columnWidth)
-                return;
-            
-            $cursorPosition += delta;
-            $cursor.style.left = (x + (this.columnWidth * delta)) + 'px';
-        };
-
-        this.updateCursor = function() {
-            this.moveCursor(this.rows, $cursorPosition);
-        };
-
-        this.insertText = function(text) {
-            var offset = 0;
-            var section = text;
-            var lastLine = $terminal.lastChild;
-            var session = lastLine.lastChild;
-
-            offset = this.columns - $cursorPosition;
-            text = text.substr(0, offset);
-            session.insertData($cursorPosition - $prompt.length, text);
-            $cursorPosition += text.length;
-            this.updateCursor();
-        };
-
-        this.backSpace = function() {
-            var lastLine = $terminal.lastChild;
-
-            if (!lastLine) {
-                return;
-            }
-
-            var text = lastLine.lastChild;
-
-            if ($cursorPosition - $prompt.length < 1) {
-                return;
-            }
-
-            text.deleteData($cursorPosition - $prompt.length - 1, 1);
-            $text = $terminal.textContent;
-            $cursorPosition--;
-            this.updateCursor();
-        };
-
-        this.newSession = function(text) {
-            var line = document.createElement('DIV');
-            var prompt = document.createElement('SPAN');
-            var session = document.createTextNode(text || '');
-
-            prompt.innerText = $prompt;
-            line.appendChild(prompt);
-            line.appendChild(session);
-            $terminal.appendChild(line);
-            $terminal.scrollByLines(1);
-            $cursorPosition = line.textContent.length;
-            this.updateCursor();
-        };
-
-        this.replaceSession = function(text) {
-            var lastLine = $terminal.lastChild;
-            var session = lastLine.lastChild;
-
-            if (session.nodeType != Node.TEXT_NODE) {
-                if (text) {
-                    this.insertText(text);
-                }
-            } else {
-                session.replaceData(0, session.length, text || '');
-            }
-        };
-
-        this.removeAllLine = function() {
-            while ($terminal.firstChild) {
-                $terminal.removeChild($terminal.firstChild);
-            }
-        };
-
-        this.commit = function() {
-            var line = $terminal.lastChild.lastChild;
-
-            if (!line || line.nodeType != Node.TEXT_NODE)
-                return;
-
-            console.log('send message: ' + line.nodeValue);
-            socket.emit('send', { message: line.nodeValue });
-            $history.push(line.nodeValue);
-            this.session.next();
-        };
-
-        this.delete = function() {
-            var session = $terminal.lastChild.lastChild;
-
-            session.deleteData($cursorPosition - $prompt.length, 1);
-        };
-
-        this.run = function(container) {
-            $container.setAttribute('class', 'terminal-container');
+            $connection = io.connect(url);
 
             $cursor.setAttribute('class', 'cursor');
-
             $terminal.setAttribute('class', 'terminal');
             $terminal.setAttribute('tabindex', '-1');
+            $container.setAttribute('class', 'terminal-container');
 
             $terminal.onkeydown = function(event) {
-                switch (event.keyCode) {
-                case 8:  // BACKSPACE
-                    $this.backSpace();
-                    return false;
-                case 13: // ENTER
-                    $this.commit();
-                    $this.newSession();
-                    return false;
-                case 23: // ESC
-                    return false;
-                case 32: // SPACE
-                    $this.insertText(' ');
-                    return false;
-                case 35: // END
-                    $this.moveCursorToEnd($this.rows);
-                    return;
-                case 36: // HOME
-                    $this.moveCursorToHome($this.rows);
-                    return;
-                case 37: // LEFT
-                    $this.moveCursorByColumns(-1);
-                    return false;
-                case 38: // UP
-                    $this.replaceSession($this.session.previous());
-                    return false;
-                case 39: // RIGHT
-                    $this.moveCursorByColumns(1);
-                    return false;
-                case 40: // DOWN
-                    $this.replaceSession($this.session.next());
-                    return false;
-                case 46: // DELETE;
-                    $this.delete();
-                    return false;
+                var handler = $handlers[event.keyCode];
+
+                if ('function' === typeof handler) {
+                    return handler.call($this, event);
                 }
             };
 
             $terminal.onkeypress = function(event) {
-                $this.insertText(String.fromCharCode(event.keyCode));
+                $stdin.append(String.fromCharCode(event.keyCode));
             };
 
             $terminal.onscroll = function(event) {
-                $this.updateCursor();
+                updateCursor.call(this);
             };
 
-            var blink = window.setInterval(function() {
-                var className = $cursor.getAttribute('class');
-                var row = $terminal.childNodes[$this.rows - 1].textContent;
+            $container.appendChild($cursor);
+            $container.appendChild($terminal);
+            container.appendChild($container);
 
-                /*if ($cursorPosition < row.length && !/mask/.test(className)) {
-                    className += ' mask';
-                    $cursor.setAttribute('class', className);
-                } else {
-                    className = className.replace(/\s*mask/g, '');
-                    $cursor.setAttribute('class', className);
-                }*/
+            $terminal.focus();
+
+            resize.call(this);
+
+            window.setInterval(function() {
+                var className = $cursor.getAttribute('class');
 
                 if (/blink/.test(className)) {
                     className = className.replace(/\s*blink/g, '');
@@ -304,25 +201,62 @@ define(function(require, exports, module) {
                     $cursor.setAttribute('class', className);
                 }
             }, 500);
-
-            $container.appendChild($cursor);
-            $container.appendChild($terminal);
-            container.appendChild($container);
-
-            $this.resize();
-            $this.newSession();
-            $terminal.focus();
-            socket.emit('resize', {
-                rows: $this.rows,
-                cols: $this.columns,
-            });
         };
 
+        function resize() {
+            var fm = Graphics['2d'].getFontMetrics(font);
+
+            $container.style.width = $container.offsetParent.clientWidth;
+            $container.style.height = $container.offsetParent.clientHeight;
+
+            $cursor.style.width = fm.width + 'px';
+            $cursor.style.height = fm.height + 'px';
+            $terminal.style.width = this.width + 'px';
+            $terminal.style.height = this.height + 'px';
+
+            $cols = Math.floor(this.width / fm.width);
+            $rows = Math.floor(this.height / fm.height);
+
+            $connection.emit('resize', {
+                cols : $cols,
+                rows : $rows,
+            });
+
+            updateUI.call(this);
+        };
+
+        function updateCursor() {
+            var fm = Graphics['2d'].getFontMetrics(font);
+
+            $cursor.style.top = ($row * fm.height - $terminal.scrollTop) + 'px';
+            $cursor.style.left = ($col * fm.width) + 'px';
+        }
+
+        function updateUI() {
+            var n = $terminal.childNodes.length;
+
+            $rows = Math.max($rows, $row);
+
+            for (var i = n; i < $rows; i++) {
+                var line = document.createElement('DIV');
+                var text = document.createTextNode('');
+
+                for (var j = 0; j < $cols; j++) {
+                    text.appendData(' ');
+                }
+
+                line.appendChild(text);
+                $terminal.appendChild(line);
+            }
+
+            updateCursor.call(this);
+        }
+
         window.onresize = function() {
-            $this.resize();
+            resize.call($this);
         };
     };
 
-    module.exports = Terminal;
+    module.exports = WebTerminal;
 });
 
