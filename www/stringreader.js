@@ -1,19 +1,5 @@
 define(function(require, exports, module) {
 
-    var EOFException = function(msg) {
-
-        Object.defineProperty(this, 'class', {
-            value : 'EOFException',
-            writable : false,
-        });
-
-        Object.defineProperty(this, 'message', {
-            value : msg,
-            writable : false,
-        });
-
-    };
-
     /**
      * Read string as a stream
      * 
@@ -31,13 +17,7 @@ define(function(require, exports, module) {
         });
 
         this.read = function(buffer) {
-            var c = $text.charCodeAt($pos++);
-
-            if (isNaN(c)) {
-                throw new EOFException('End of stream');
-            }
-
-            return c;
+            return $text.charCodeAt($pos++);
         };
 
         this.unread = function() {
@@ -49,11 +29,6 @@ define(function(require, exports, module) {
 
             n = n || 1;
             str = $text.substr($pos, n);
-
-            if (!str || str.length <= 0) {
-                throw new EOFException('End of stream');
-            }
-
             buffer && buffer.push(str);
             $pos = Math.min($text.length, $pos + n);
 

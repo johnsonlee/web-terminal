@@ -3,15 +3,17 @@ define(function(require, exports, module) {
     var Stack = function() {
         var $stack = [];
 
+        Object.defineProperty(this, 'empty', {
+            get : function() {
+                return $stack.length <= 0;
+            }
+        });
+
         Object.defineProperty(this, 'size', {
             get : function() {
                 return $stack.length;
             }
         });
-
-        this.isEmpty = function() {
-            return $stack.length <= 0;
-        };
 
         this.peak = function() {
             return $stack[$stack.length - 1];

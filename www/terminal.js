@@ -327,19 +327,10 @@ define(function(require, exports, module) {
             $rows = Math.max($rows, $row);
 
             if ($stdout.length > 0) {
-                var tokens = $parser.parse($stdout.data);
-
+                $parser.parse($stdout.data, function(token) {
+                    console.log(token.image);
+                });
                 $stdout.clear();
-
-                for (var it = tokens.iterator; it; it = it.next) {
-                    var renderer = $renderers[it.data.id];
-
-                    console.debug(JSON.stringify(it.data)); 
-
-                    if (renderer) {
-                        renderer.call(this, it);
-                    }
-                }
             }
 
             updateCursor.call(this);
