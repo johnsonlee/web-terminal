@@ -3,6 +3,12 @@ define(function(require, exports, module) {
     var StringBuffer = function() {
         var $buffer = document.createTextNode('');
 
+        Object.defineProperty(this, 'data', {
+            get : function() {
+                return $buffer.data;
+            }
+        });
+
         Object.defineProperty(this, 'length', {
             get : function() {
                 return $buffer.length;

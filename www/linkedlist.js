@@ -8,6 +8,32 @@ define(function(require, exports, module) {
             data : null,
         };
 
+        Object.defineProperty(this, 'first', {
+            get : function() {
+                if ($head.next) {
+                    return $head.next.data;
+                }
+
+                return null;
+            }
+        });
+
+        Object.defineProperty(this, 'last', {
+            get : function() {
+                if ($head.prev) {
+                    return $head.prev.data;
+                }
+
+                return null;
+            }
+        });
+
+        Object.defineProperty(this, 'iterator', {
+            get : function() {
+                return $head.next;
+            }
+        });
+
         this.add = function(data) {
             var entry = {
                 prev : $head.prev,
@@ -26,21 +52,8 @@ define(function(require, exports, module) {
             console.debug(JSON.stringify(data));
         };
 
-        this.iterator = function() {
-            var head = $head;
-
-            return {
-                hasNext : function() {
-                    return !!head.next;
-                },
-                next : function() {
-                    if (head.next) {
-                        return (head = head.next).data;
-                    }
-
-                    return null;
-                },
-            };
+        this.clear = function() {
+            $head.prev = $head.next = null;
         };
 
     };

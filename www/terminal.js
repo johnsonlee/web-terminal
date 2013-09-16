@@ -10,6 +10,17 @@ define(function(require, exports, module) {
         family : 'Courier, Courier New',
     };
 
+    var COLORS = [
+        'black',
+        'red',
+        'green',
+        'yello',
+        'blue',
+        'magenta',
+        'cyan',
+        'white',
+    ]
+
     /**
      * Web Terminal
      */
@@ -31,11 +42,11 @@ define(function(require, exports, module) {
              * BACKSPACE
              */
             '8'  : function(event) {
-                var c = $col - 1;
+                //var c = $col - 1;
 
-                $col = ((c + $cols) % $cols) || $cols - 1;
-                $row -= Math.floor(($cols - c) / $cols);
-                updateCursor.call(this);
+                //$col = ((c + $cols) % $cols) || $cols - 1;
+                //$row -= Math.floor(($cols - c) / $cols);
+                //updateCursor.call(this);
             },
 
             /**
@@ -47,7 +58,7 @@ define(function(require, exports, module) {
                 });
 
                 $stdin.clear();
-                $row++;
+                //$row++;
                 updateUI.call(this);
                 $terminal.scrollByLines(1);
             },
@@ -62,65 +73,129 @@ define(function(require, exports, module) {
              * SPACE
              */
             '32' : function(event) {
-                var c = $col + 1;
+                //var c = $col + 1;
 
-                $col = c % $cols;
-                $row += Math.floor(c / $cols);
-                updateCursor.call(this);
+                //$col = c % $cols;
+                //$row += Math.floor(c / $cols);
+                //updateCursor.call(this);
             },
 
             /**
              * END
              */
             '35' : function(event) {
-                $col = $cols;
-                updateCursor.call(this);
+                //$col = $cols;
+                //updateCursor.call(this);
             },
 
             /**
              * HOME
              */
             '36' : function(event) {
-                $col = 0;
-                updateCursor.call(this);
+                //$col = 0;
+                //updateCursor.call(this);
             },
 
             /**
              * LEFT
              */
             '37' : function(event) {
-                $col = Math.max(0, $col - 1);
-                updateCursor.call(this);
+                //$col = Math.max(0, $col - 1);
+                //updateCursor.call(this);
             },
 
             /**
              * UP
              */
             '38' : function(event) {
-                $row = Math.max(0, $row - 1);
-                updateCursor.call(this);
+                //$row = Math.max(0, $row - 1);
+                //updateCursor.call(this);
             },
 
             /**
              * RIGHT
              */
             '39' : function(event) {
-                $col = Math.min($cols, $col + 1);
-                updateCursor.call(this);
+                //$col = Math.min($cols, $col + 1);
+                //updateCursor.call(this);
             },
 
             /**
              * DOWN
              */
             '40' : function(event) {
-                $row = Math.min($rows, $row + 1);
-                updateCursor.call(this);
+                //$row = Math.min($rows, $row + 1);
+                //updateCursor.call(this);
             },
 
             /**
              * DELETE
              */
             '46' : function(event) {
+            },
+        };
+        var $renderers = {
+            'CR'   : function(it) {
+                $col = 0;
+
+                if (++$row > $rows) {
+                    newLine.call(this);
+                }
+            },
+            'CRLF' : function(it) {
+                $col = 0;
+
+                if (++$row > $rows) {
+                    newLine.call(this);
+                }
+            },
+            'TEXT' : function(it) {
+                var token = it.data;
+                var len = token.image.length;
+
+                if (it.prev && 'OSC' == it.prev.data.id) {
+                    return;
+                }
+
+                var line = $terminal.childNodes[$row]
+                        || newLine.call(this);
+
+                if (it.prev && AnsiParser.isBeginOfSGR(it.prev.data)
+                    && it.next && AnsiParser.isEndOfSGR(it.next.data)) {
+                    var span = document.createElement('SPAN');
+                    var params = it.prev.data.params;
+                    var styles = [];
+
+                    for (var i = 0; i < params.length; i++) {
+                        var param = params[i];
+
+                        switch (param) {
+                        case '01':
+                            styles.push('font-weight:bold');
+                            break;
+                        case '30':
+                        case '31':
+                        case '32':
+                        case '33':
+                        case '34':
+                        case '35':
+                        case '36':
+                        case '37':
+                            styles.push('color:' + COLORS[parseInt(param) - 30]);
+                            break;
+                        }
+                    }
+
+                    span.innerText = token.image;
+                    span.setAttribute('style', styles.join(';'));
+                    line.appendChild(span);
+                } else {
+                    var text = document.createTextNode(token.image);
+
+                    line.appendChild(text);
+                }
+
+                $col += len;
             },
         };
 
@@ -160,6 +235,11 @@ define(function(require, exports, module) {
             var $this = this;
 
             $connection = io.connect(url);
+            $connection.on('output', function(data) {
+                console.log(JSON.stringify(data));
+                $stdout.append(data.message);
+                updateUI.call(this);
+            });
 
             $cursor.setAttribute('class', 'cursor');
             $terminal.setAttribute('class', 'terminal');
@@ -225,6 +305,15 @@ define(function(require, exports, module) {
             updateUI.call(this);
         };
 
+        function newLine() {
+            var line = document.createElement('DIV');
+
+            $terminal.appendChild(line);
+            $terminal.scrollByLines(1);
+
+            return line;
+        }
+
         function updateCursor() {
             var fm = Graphics['2d'].getFontMetrics(font);
 
@@ -237,16 +326,20 @@ define(function(require, exports, module) {
 
             $rows = Math.max($rows, $row);
 
-            for (var i = n; i < $rows; i++) {
-                var line = document.createElement('DIV');
-                var text = document.createTextNode('');
+            if ($stdout.length > 0) {
+                var tokens = $parser.parse($stdout.data);
 
-                for (var j = 0; j < $cols; j++) {
-                    text.appendData(' ');
+                $stdout.clear();
+
+                for (var it = tokens.iterator; it; it = it.next) {
+                    var renderer = $renderers[it.data.id];
+
+                    console.debug(JSON.stringify(it.data)); 
+
+                    if (renderer) {
+                        renderer.call(this, it);
+                    }
                 }
-
-                line.appendChild(text);
-                $terminal.appendChild(line);
             }
 
             updateCursor.call(this);

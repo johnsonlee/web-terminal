@@ -14,7 +14,7 @@ var express = require('express')
 var app = express();
 
 app.configure(function() {
-    app.set('port', process.env.PORT || 3000);
+    app.set('port', process.env.PORT || 8080);
     app.set('views', __dirname + '/views');
     app.set('view engine', 'ejs');
     app.use(express.favicon());
@@ -44,7 +44,7 @@ socketManager.sockets.on('connection', function(socket) {
     });
 
     bash.on('data', function(data) {
-        console.log(data);
+        console.log(JSON.stringify(data));
 
         socket.emit('output', {
             message : data,
@@ -57,9 +57,7 @@ socketManager.sockets.on('connection', function(socket) {
 
     socket.on('send', function(data) {
         console.log('received data: ' + JSON.stringify(data));
-
-        bash.write(data);
-        bash.write('\r');
+        bash.write(data.message + '\r');
     });
 });
 
