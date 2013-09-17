@@ -31,8 +31,6 @@ define(function(require, exports, module) {
         var $cols = 0;
         var $rows = 0;
         var $parser = new AnsiParser();
-        var $stdin = new StringBuffer();
-        var $stdout = new StringBuffer();
         var $cursor = document.createElement('DIV');
         var $terminal = document.createElement('DIV');
         var $container = document.createElement('DIV');
@@ -42,25 +40,18 @@ define(function(require, exports, module) {
              * BACKSPACE
              */
             '8'  : function(event) {
-                //var c = $col - 1;
-
-                //$col = ((c + $cols) % $cols) || $cols - 1;
-                //$row -= Math.floor(($cols - c) / $cols);
-                //updateCursor.call(this);
+                $connection.emit('send', { message : '\b' });
+                return false;
             },
 
             /**
              * ENTER
              */
             '13' : function(event) {
-                $connection.emit('send', {
-                    message : $stdin.data,
-                });
-
-                $stdin.clear();
-                //$row++;
+                $connection.emit('send', { message : '\r' });
                 updateUI.call(this);
                 $terminal.scrollByLines(1);
+                return false;
             },
 
             /**
@@ -73,59 +64,44 @@ define(function(require, exports, module) {
              * SPACE
              */
             '32' : function(event) {
-                //var c = $col + 1;
-
-                //$col = c % $cols;
-                //$row += Math.floor(c / $cols);
-                //updateCursor.call(this);
+                $connection.emit('send', { message : ' ' });
+                return false;
             },
 
             /**
              * END
              */
             '35' : function(event) {
-                //$col = $cols;
-                //updateCursor.call(this);
             },
 
             /**
              * HOME
              */
             '36' : function(event) {
-                //$col = 0;
-                //updateCursor.call(this);
             },
 
             /**
              * LEFT
              */
             '37' : function(event) {
-                //$col = Math.max(0, $col - 1);
-                //updateCursor.call(this);
             },
 
             /**
              * UP
              */
             '38' : function(event) {
-                //$row = Math.max(0, $row - 1);
-                //updateCursor.call(this);
             },
 
             /**
              * RIGHT
              */
             '39' : function(event) {
-                //$col = Math.min($cols, $col + 1);
-                //updateCursor.call(this);
             },
 
             /**
              * DOWN
              */
             '40' : function(event) {
-                //$row = Math.min($rows, $row + 1);
-                //updateCursor.call(this);
             },
 
             /**
@@ -135,66 +111,42 @@ define(function(require, exports, module) {
             },
         };
         var $renderers = {
-            'CR'   : function(it) {
+            'BEL'  : function(token) {
+                console.log('\u0007');
+            },
+            'LF'   : function() {
                 $col = 0;
 
                 if (++$row > $rows) {
                     newLine.call(this);
                 }
-            },
-            'CRLF' : function(it) {
-                $col = 0;
 
-                if (++$row > $rows) {
-                    newLine.call(this);
-                }
+                updateUI.call(this);
             },
-            'TEXT' : function(it) {
-                var token = it.data;
+            'CR'   : function(token) {
+                $col = 0;
+                updateUI.call(this);
+            },
+            'EL'   : function(token) {
+                var line = $terminal.childNodes[$row];
+
+                if (line.lastChild) {
+                    line.removeChild(line.lastChild);
+                }
+
+                $col--;
+                updateUI.call(this);
+            },
+            'OSC'  : function(token) {
+                document.title = token.title;
+            },
+            'TEXT' : function(token) {
                 var len = token.image.length;
-
-                if (it.prev && 'OSC' == it.prev.data.id) {
-                    return;
-                }
-
                 var line = $terminal.childNodes[$row]
                         || newLine.call(this);
+                var text = document.createTextNode(token.image);
 
-                if (it.prev && AnsiParser.isBeginOfSGR(it.prev.data)
-                    && it.next && AnsiParser.isEndOfSGR(it.next.data)) {
-                    var span = document.createElement('SPAN');
-                    var params = it.prev.data.params;
-                    var styles = [];
-
-                    for (var i = 0; i < params.length; i++) {
-                        var param = params[i];
-
-                        switch (param) {
-                        case '01':
-                            styles.push('font-weight:bold');
-                            break;
-                        case '30':
-                        case '31':
-                        case '32':
-                        case '33':
-                        case '34':
-                        case '35':
-                        case '36':
-                        case '37':
-                            styles.push('color:' + COLORS[parseInt(param) - 30]);
-                            break;
-                        }
-                    }
-
-                    span.innerText = token.image;
-                    span.setAttribute('style', styles.join(';'));
-                    line.appendChild(span);
-                } else {
-                    var text = document.createTextNode(token.image);
-
-                    line.appendChild(text);
-                }
-
+                line.appendChild(text);
                 $col += len;
             },
         };
@@ -237,8 +189,13 @@ define(function(require, exports, module) {
             $connection = io.connect(url);
             $connection.on('output', function(data) {
                 console.log(JSON.stringify(data));
-                $stdout.append(data.message);
-                updateUI.call(this);
+                $parser.parse(data.message, function(token) {
+                    console.log(JSON.stringify(token));
+                    var renderer = $renderers[token.type];
+
+                    renderer && renderer(token);
+                });
+                updateUI.call($this);
             });
 
             $cursor.setAttribute('class', 'cursor');
@@ -255,7 +212,9 @@ define(function(require, exports, module) {
             };
 
             $terminal.onkeypress = function(event) {
-                $stdin.append(String.fromCharCode(event.keyCode));
+                $connection.emit('send', {
+                    message : String.fromCharCode(event.keyCode)
+                });
             };
 
             $terminal.onscroll = function(event) {
@@ -325,14 +284,6 @@ define(function(require, exports, module) {
             var n = $terminal.childNodes.length;
 
             $rows = Math.max($rows, $row);
-
-            if ($stdout.length > 0) {
-                $parser.parse($stdout.data, function(token) {
-                    console.log(JSON.stringify(token));
-                });
-                $stdout.clear();
-            }
-
             updateCursor.call(this);
         }
 

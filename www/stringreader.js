@@ -17,6 +17,10 @@ define(function(require, exports, module) {
         });
 
         this.read = function(buffer) {
+            if ($pos >= $text.length) {
+                throw new Error('EOF');
+            }
+
             return $text.charCodeAt($pos++);
         };
 
@@ -28,6 +32,11 @@ define(function(require, exports, module) {
             var str = null;
 
             n = n || 1;
+
+            if ($pos + n >= $text.length) {
+                throw new Error('EOF');
+            }
+
             str = $text.substr($pos, n);
             buffer && buffer.push(str);
             $pos = Math.min($text.length, $pos + n);

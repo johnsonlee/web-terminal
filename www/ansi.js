@@ -896,24 +896,36 @@ define(function(require, exports, module) {
     var ANSIParser = function() {
         var $stack = new Stack();
 
-        this.parse = function(input, visitor) {
+        this.parse = function(input, renderer) {
             var c = 0;
             var tokens = new Array();
             var reader = new StringReader(input);
+            var prerenderer = new Prerenderer(renderer);
 
-            while (!isNaN(c = reader.read())) {
-                if (!isCtrlChar(c)) {
-                    $stack.push(Char(c));
-                    continue;
+            try {
+                while (true) {
+                    c = reader.read();
+
+                    if (!isCtrlChar(c)) {
+                        $stack.push(Char(c));
+                        continue;
+                    }
+
+                    reader.unread();
+
+                    if (!$stack.empty) {
+                        dumpToken('TEXT', prerenderer);
+                    }
+
+                    parseCtrlChar.call(this, reader, prerenderer);
                 }
-
-                reader.unread();
+            } catch (e) {
+                if ('EOF' != e.message)
+                    throw e;
 
                 if (!$stack.empty) {
-                    dumpToken('TEXT', visitor);
+                    dumpToken('TEXT', prerenderer);
                 }
-
-                parseCtrlChar.call(this, reader, visitor);
             }
 
             console.log('Parsing finished');
@@ -922,203 +934,203 @@ define(function(require, exports, module) {
         /**
          * Parse control character
          */
-        function parseCtrlChar(reader, visitor) {
+        function parseCtrlChar(reader, prerenderer) {
             var c = reader.read();
 
             $stack.push(Char(c));
 
             switch (c) {
             case 0x00:
-                dumpToken('NUL', visitor);
+                dumpToken('NUL', prerenderer);
                 break;
             case 0x01:
-                dumpToken('SOH', visitor);
+                dumpToken('SOH', prerenderer);
                 break;
             case 0x02:
-                dumpToken('STX', visitor);
+                dumpToken('STX', prerenderer);
                 break;
             case 0x03:
-                dumpToken('ETX', visitor);
+                dumpToken('ETX', prerenderer);
                 break;
             case 0x04:
-                dumpToken('EOT', visitor);
+                dumpToken('EOT', prerenderer);
                 break;
             case 0x05: 
-                dumpToken('ENQ', visitor);
+                dumpToken('ENQ', prerenderer);
                 break;
             case 0x06: 
-                dumpToken('ACK', visitor);
+                dumpToken('ACK', prerenderer);
                 break;
             case 0x07: 
-                dumpToken('BEL', visitor);
+                dumpToken('BEL', prerenderer);
                 break;
             case 0x08: 
-                dumpToken('BS', visitor);
+                dumpToken('BS', prerenderer);
                 break;
             case 0x09: 
-                dumpToken('HT', visitor);
+                dumpToken('HT', prerenderer);
                 break;
             case 0x0A: 
-                dumpToken('LF', visitor);
+                dumpToken('LF', prerenderer);
                 break;
             case 0x0B: 
-                dumpToken('VT', visitor);
+                dumpToken('VT', prerenderer);
                 break;
             case 0x0C: 
-                dumpToken('FF', visitor);
+                dumpToken('FF', prerenderer);
                 break;
-            case 0x0D: 
-                dumpToken('CR', visitor);
+            case 0x0D:
+                dumpToken('CR', prerenderer);
                 break;
             case 0x0E: 
-                dumpToken('SO', visitor);
+                dumpToken('SO', prerenderer);
                 break;
             case 0x0F: 
-                dumpToken('SI', visitor);
+                dumpToken('SI', prerenderer);
                 break;
             case 0x10: 
-                dumpToken('DLE', visitor);
+                dumpToken('DLE', prerenderer);
                 break;
             case 0x11: 
-                dumpToken('DC1', visitor);
+                dumpToken('DC1', prerenderer);
                 break;
             case 0x12: 
-                dumpToken('DC2', visitor);
+                dumpToken('DC2', prerenderer);
                 break;
             case 0x13:
-                dumpToken('DC3', visitor);
+                dumpToken('DC3', prerenderer);
                 break;
             case 0x14: 
-                dumpToken('DC4', visitor);
+                dumpToken('DC4', prerenderer);
                 break;
             case 0x15: 
-                dumpToken('NAK', visitor);
+                dumpToken('NAK', prerenderer);
                 break;
             case 0x16: 
-                dumpToken('SYN', visitor);
+                dumpToken('SYN', prerenderer);
                 break;
             case 0x17: 
-                dumpToken('ETB', visitor);
+                dumpToken('ETB', prerenderer);
                 break;
             case 0x18: 
-                dumpToken('CAN', visitor);
+                dumpToken('CAN', prerenderer);
                 break;
             case 0x19: 
-                dumpToken('EM', visitor);
+                dumpToken('EM', prerenderer);
                 break;
             case 0x1A: 
-                dumpToken('SUB', visitor);
+                dumpToken('SUB', prerenderer);
                 break;
             case 0x1B: 
-                parseEscapeSequence.call(this, reader, visitor);
+                parseEscapeSequence.call(this, reader, prerenderer);
                 break;
             case 0x1C: 
-                dumpToken('FS', visitor);
+                dumpToken('FS', prerenderer);
                 break;
             case 0x1D: 
-                dumpToken('GS', visitor);
+                dumpToken('GS', prerenderer);
                 break;
             case 0x1E: 
-                dumpToken('RS', visitor);
+                dumpToken('RS', prerenderer);
                 break;
             case 0x1F: 
-                dumpToken('US', visitor);
+                dumpToken('US', prerenderer);
                 break;
             case 0x80: 
-                dumpToken('PAD', visitor);
+                dumpToken('PAD', prerenderer);
                 break;
             case 0x81: 
-                dumpToken('HOP', visitor);
+                dumpToken('HOP', prerenderer);
                 break;
             case 0x82: 
-                dumpToken('BPH', visitor);
+                dumpToken('BPH', prerenderer);
                 break;
             case 0x83: 
-                dumpToken('NBH', visitor);
+                dumpToken('NBH', prerenderer);
                 break;
             case 0x84: 
-                dumpToken('IND', visitor);
+                dumpToken('IND', prerenderer);
                 break;
             case 0x85: 
-                dumpToken('NEL', visitor);
+                dumpToken('NEL', prerenderer);
                 break;
             case 0x86: 
-                dumpToken('SSA', visitor);
+                dumpToken('SSA', prerenderer);
                 break;
             case 0x87: 
-                dumpToken('ESA', visitor);
+                dumpToken('ESA', prerenderer);
                 break;
             case 0x88: 
-                dumpToken('HTS', visitor);
+                dumpToken('HTS', prerenderer);
                 break;
             case 0x89: 
-                dumpToken('HTJ', visitor);
+                dumpToken('HTJ', prerenderer);
                 break;
             case 0x8A: 
-                dumpToken('VTS', visitor);
+                dumpToken('VTS', prerenderer);
                 break;
             case 0x8B: 
-                dumpToken('PLD', visitor);
+                dumpToken('PLD', prerenderer);
                 break;
             case 0x8C: 
-                dumpToken('PLU', visitor);
+                dumpToken('PLU', prerenderer);
                 break;
             case 0x8D: 
-                dumpToken('RI', visitor);
+                dumpToken('RI', prerenderer);
                 break;
             case 0x8E: 
-                dumpToken('SS2', visitor);
+                dumpToken('SS2', prerenderer);
                 break;
             case 0x8F: 
-                dumpToken('SS3', visitor);
+                dumpToken('SS3', prerenderer);
                 break;
             case 0x90: 
-                dumpToken('DCS', visitor);
+                dumpToken('DCS', prerenderer);
                 break;
             case 0x91: 
-                dumpToken('PU1', visitor);
+                dumpToken('PU1', prerenderer);
                 break;
             case 0x92: 
-                dumpToken('PU2', visitor);
+                dumpToken('PU2', prerenderer);
                 break;
             case 0x93: 
-                dumpToken('STS', visitor);
+                dumpToken('STS', prerenderer);
                 break;
             case 0x94: 
-                dumpToken('CCH', visitor);
+                dumpToken('CCH', prerenderer);
                 break;
             case 0x95: 
-                dumpToken('MW', visitor);
+                dumpToken('MW', prerenderer);
                 break;
             case 0x96: 
-                dumpToken('SPA', visitor);
+                dumpToken('SPA', prerenderer);
                 break;
             case 0x97: 
-                dumpToken('EPA', visitor);
+                dumpToken('EPA', prerenderer);
                 break;
             case 0x98: 
-                dumpToken('SOS', visitor);
+                dumpToken('SOS', prerenderer);
                 break;
             case 0x99: 
-                dumpToken('SGCI', visitor);
+                dumpToken('SGCI', prerenderer);
                 break;
             case 0x9A: 
-                dumpToken('SCI', visitor);
+                dumpToken('SCI', prerenderer);
                 break;
             case 0x9B: 
-                dumpToken('CSI', visitor);
+                dumpToken('CSI', prerenderer);
                 break;
             case 0x9C: 
-                dumpToken('ST', visitor);
+                dumpToken('ST', prerenderer);
                 break;
             case 0x9D: 
-                dumpToken('OSC', visitor);
+                dumpToken('OSC', prerenderer);
                 break;
             case 0x9E: 
-                dumpToken('PM', visitor);
+                dumpToken('PM', prerenderer);
                 break;
             case 0x9F: 
-                dumpToken('APC', visitor);
+                dumpToken('APC', prerenderer);
                 break;
             }
         }
@@ -1127,11 +1139,11 @@ define(function(require, exports, module) {
          * Parse Escape Sequence, A two or three character string staring
          * with ESCape.
          */
-        function parseEscapeSequence(reader, visitor) {
+        function parseEscapeSequence(reader, prerenderer) {
             var c = reader.peak();
 
             if (isCtrlChar(c)) {
-                parseCtrlChar.call(this, reader, visitor);
+                parseCtrlChar.call(this, reader, prerenderer);
                 return;
             }
 
@@ -1143,27 +1155,27 @@ define(function(require, exports, module) {
                 switch (c = reader.read()) {
                 case 0x46:
                     $stack.push(Char(c));
-                    dumpToken('S7C1T', visitor);
+                    dumpToken('S7C1T', prerenderer);
                     break esc;
                 case 0x47:
                     $stack.push(Char(c));
-                    dumpToken('S8C1T', visitor);
+                    dumpToken('S8C1T', prerenderer);
                     break esc;
                 }
 
                 reader.unread();
                 break;
             case 0x21: /* ! */
-                dumpToken('CZD', visitor);
+                dumpToken('CZD', prerenderer);
                 break;
             case 0x22: /* " */
-                dumpToken('C1D', visitor);
+                dumpToken('C1D', prerenderer);
                 break;
             case 0x23: /* # */
                 switch (c = reader.read()) {
                 case 0x38: /* 8 */
                     $stack.push(Char(c));
-                    dumpToken('DECALN', visitor);
+                    dumpToken('DECALN', prerenderer);
                     break esc;
                 }
 
@@ -1175,25 +1187,25 @@ define(function(require, exports, module) {
 
                 switch (c) {
                 case 0x28: /* ( */
-                    dumpToken('GZDM4', visitor);
+                    dumpToken('GZDM4', prerenderer);
                     break esc;
                 case 0x29: /* ) */
-                    dumpToken('G1DM4', visitor);
+                    dumpToken('G1DM4', prerenderer);
                     break esc;
                 case 0x2A: /* * */
-                    dumpToken('G2DM4', visitor);
+                    dumpToken('G2DM4', prerenderer);
                     break esc;
                 case 0x2B: /* + */
-                    dumpToken('G3DM4', visitor);
+                    dumpToken('G3DM4', prerenderer);
                     break esc;
                 case 0x2D: /* - */
-                    dumpToken('G1DM6', visitor);
+                    dumpToken('G1DM6', prerenderer);
                     break esc;
                 case 0x2E: /* . */
-                    dumpToken('G2DM6', visitor);
+                    dumpToken('G2DM6', prerenderer);
                     break esc;
                 case 0x2F: /* / */
-                    dumpToken('G3DM6', visitor);
+                    dumpToken('G3DM6', prerenderer);
                     break esc;
                 }
 
@@ -1210,34 +1222,34 @@ define(function(require, exports, module) {
                     break;
                 }
 
-                dumpToken('DOCS', visitor);
+                dumpToken('DOCS', prerenderer);
                 break;
             case 0x26: /* & */
                 break;
             case 0x27: /* ' */
                 break;
             case 0x28: /* ( */
-                dumpToken('GZD4', visitor);
+                dumpToken('GZD4', prerenderer);
                 break;
             case 0x29: /* ) */
-                dumpToken('G1D4', visitor);
+                dumpToken('G1D4', prerenderer);
                 break;
             case 0x2A: /* * */
-                dumpToken('G2D4', visitor);
+                dumpToken('G2D4', prerenderer);
                 break;
             case 0x2B: /* + */
-                dumpToken('G3D4', visitor);
+                dumpToken('G3D4', prerenderer);
                 break;
             case 0x2C: /* , */
                 break;
             case 0x2D: /* - */
-                dumpToken('G1D6', visitor);
+                dumpToken('G1D6', prerenderer);
                 break;
             case 0x2E: /* . */
-                dumpToken('G2D6', visitor);
+                dumpToken('G2D6', prerenderer);
                 break;
             case 0x2F: /* / */
-                dumpToken('G3D6', visitor);
+                dumpToken('G3D6', prerenderer);
                 break;
             case 0x30: /* 0 */
                 break;
@@ -1252,13 +1264,13 @@ define(function(require, exports, module) {
             case 0x35: /* 5 */
                 break;
             case 0x36: /* 6 */
-                dumpToken('DECBI', visitor);
+                dumpToken('DECBI', prerenderer);
                 break;
             case 0x37: /* 7 */
-                dumpToken('DECSC', visitor);
+                dumpToken('DECSC', prerenderer);
                 break;
             case 0x38: /* 8 */
-                dumpToken('DECRC', visitor);
+                dumpToken('DECRC', prerenderer);
                 break;
             case 0x39: /* 9 */
                 break;
@@ -1269,10 +1281,10 @@ define(function(require, exports, module) {
             case 0x3C: /* < */
                 break;
             case 0x3D: /* = */
-                dumpToken('DECKPAM', visitor);
+                dumpToken('DECKPAM', prerenderer);
                 break;
             case 0x3E: /* > */
-                dumpToken('DECKPNM', visitor);
+                dumpToken('DECKPNM', prerenderer);
                 break;
             case 0x3F: /* ? */
                 break;
@@ -1285,17 +1297,17 @@ define(function(require, exports, module) {
             case 0x43: /* C */
                 break;
             case 0x44: /* D */
-                dumpToken('IND', visitor);
+                dumpToken('IND', prerenderer);
                 break;
             case 0x45: /* E */
-                dumpToken('NEL', visitor);
+                dumpToken('NEL', prerenderer);
                 break;
             case 0x46: /* F */
                 break;
             case 0x47: /* G */
                 break;
             case 0x48: /* H */
-                dumpToken('HTS', visitor);
+                dumpToken('HTS', prerenderer);
                 break;
             case 0x49: /* I */
                 break;
@@ -1306,16 +1318,16 @@ define(function(require, exports, module) {
             case 0x4C: /* L */
                 break;
             case 0x4D: /* M */
-                dumpToken('RI', visitor);
+                dumpToken('RI', prerenderer);
                 break;
             case 0x4E: /* N */
-                dumpToken('SS2', visitor);
+                dumpToken('SS2', prerenderer);
                 break;
             case 0x4F: /* O */
-                dumpToken('SS3', visitor);
+                dumpToken('SS3', prerenderer);
                 break;
             case 0x50: /* P */
-                parseDCSSequence.call(this, reader, visitor);
+                parseDCSSequence.call(this, reader, prerenderer);
                 break;
             case 0x51: /* Q */
                 break;
@@ -1332,27 +1344,27 @@ define(function(require, exports, module) {
             case 0x57: /* W */
                 break;
             case 0x58: /* X */
-                parseSOSSequence.call(this, reader, visitor);
+                parseSOSSequence.call(this, reader, prerenderer);
                 break;
             case 0x59: /* Y */
                 break;
             case 0x5A: /* Z */
-                dumpToken('DECID', visitor);
+                dumpToken('DECID', prerenderer);
                 break;
             case 0x5B: /* [ */
-                parseCSISequence.call(this, reader, visitor);
+                parseCSISequence.call(this, reader, prerenderer);
                 break;
             case 0x5C: /* \ */
                 // String terminator, ends a DCS, SOS, OSC, PM and APC sequence
                 throw new SyntaxError('Unexpected token: ' + $stack.toString());
             case 0x5D: /* ] */
-                parseOSCSequence.call(this, reader, visitor);
+                parseOSCSequence.call(this, reader, prerenderer);
                 break;
             case 0x5E: /* ^ */
-                parsePMSequence.call(this, reader, visitor);
+                parsePMSequence.call(this, reader, prerenderer);
                 break;
             case 0x5F: /* _ */
-                parseAPCSequence.call(this, reader, visitor);
+                parseAPCSequence.call(this, reader, prerenderer);
                 break;
             case 0x60: /* ` */
                 break;
@@ -1361,7 +1373,7 @@ define(function(require, exports, module) {
             case 0x62: /* b */
                 break;
             case 0x63: /* c */
-                dumpToken('RIS', visitor);
+                dumpToken('RIS', prerenderer);
                 break;
             case 0x64: /* d */
                 break;
@@ -1385,10 +1397,10 @@ define(function(require, exports, module) {
             case 0x6D: /* m */
                 break;
             case 0x6E: /* n */
-                dumpToken('LS2', visitor);
+                dumpToken('LS2', prerenderer);
                 break;
             case 0x6F: /* o */
-                dumpToken('LS3', visitor);
+                dumpToken('LS3', prerenderer);
                 break;
             case 0x70: /* p */
                 break;
@@ -1415,13 +1427,13 @@ define(function(require, exports, module) {
             case 0x7B: /* { */
                 break;
             case 0x7C: /* | */
-                dumpToken('LS3R', visitor);
+                dumpToken('LS3R', prerenderer);
                 break;
             case 0x7D: /* } */
-                dumpToken('LS2R', visitor);
+                dumpToken('LS2R', prerenderer);
                 break;
             case 0x7E: /* ~ */
-                dumpToken('LS1R', visitor);
+                dumpToken('LS1R', prerenderer);
                 break;
             }
         }
@@ -1429,7 +1441,7 @@ define(function(require, exports, module) {
         /**
          * Parse CSI sequence
          */
-        function parseCSISequence(reader, visitor) {
+        function parseCSISequence(reader, prerenderer) {
             var c = reader.read();
 
             $stack.push(Char(c));
@@ -1440,7 +1452,7 @@ define(function(require, exports, module) {
                 if (0x7B == reader.peak()) {
                     c = reader.read();
                     $stack.push(Char(c));
-                    dumpToken('DECSLE', visitor);
+                    dumpToken('DECSLE', prerenderer);
                 }
                 break;
             case 0x30: /* 0 */
@@ -1465,10 +1477,10 @@ define(function(require, exports, module) {
 
                     switch (c) {
                     case 0x7D: /* } */
-                        dumpToken('DECSASD');
+                        dumpToken('DECSASD', prerenderer);
                         break csi;
                     case 0x7E: /* ~ */
-                        dumpToken('DECSSDT');
+                        dumpToken('DECSSDT', prerenderer);
                         break csi;
                     }
 
@@ -1513,7 +1525,7 @@ define(function(require, exports, module) {
                     switch (c) {
                     case 0x22: /* " */
                         if (2 == groups.length && 0x70 == reader.peak()) {
-                            dumpToken('DECSCL', visitor);
+                            dumpToken('DECSCL', prerenderer);
                             break csi;
                         }
                         break;
@@ -1521,10 +1533,10 @@ define(function(require, exports, module) {
                         if (4 == groups.length) {
                             switch (reader.peak()) {
                             case 0x7A: /* z */
-                                dumpToken('DECERA', visitor);
+                                dumpToken('DECERA', prerenderer);
                                 break csi;
                             case 0x7B: /* { */
-                                dumpToken('DECSERA', visitor);
+                                dumpToken('DECSERA', prerenderer);
                                 break csi;
                             }
                         }
@@ -1535,17 +1547,17 @@ define(function(require, exports, module) {
 
                         switch (c) {
                         case 0x24: /* $ */
-                            dumpToken('DECSLE', visitor);
+                            dumpToken('DECSLE', prerenderer);
                             break csi;
                         case 0x77: /* w */
                             if (4 == groups.length) {
-                                dumpToken('DECEFR', visitor);
+                                dumpToken('DECEFR', prerenderer);
                                 break csi;
                             }
                             break;
                         case 0x7A: /* z */
                             if (2 == groups.length) {
-                                dumpToken('DECELR', visitor);
+                                dumpToken('DECELR', prerenderer);
                                 break csi;
                             }
                             break;
@@ -1556,43 +1568,43 @@ define(function(require, exports, module) {
                         break;
                     case 0x48: /* H */
                         if (2 == groups.length) {
-                            dumpToken('CUP', visitor);
+                            dumpToken('CUP', prerenderer);
                             break csi;
                         }
                         break;
                     case 0x66: /* f */
                         if (2 == groups.length) {
-                            dumpToken('HVP', visitor);
+                            dumpToken('HVP', prerenderer);
                             break csi;
                         }
                         break;
                     case 0x68: /* h */
-                        dumpToken('SM', visitor);
+                        dumpToken('SM', prerenderer);
                         break csi;
                     case 0x69: /* i */
-                        dumpToken('MC', visitor);
+                        dumpToken('MC', prerenderer);
                         break csi;
                     case 0x6C: /* l */
-                        dumpToken('RM', visitor);
+                        dumpToken('RM', prerenderer);
                         break csi;
                     case 0x6D: /* m */
-                        dumpToken('SGR', visitor);
+                        dumpToken('SGR', prerenderer);
                         break csi;
-                    case 0x73: /* r */
+                    case 0x72: /* r */
                         if (2 == groups.length) {
-                            dumpToken('DECSTBM');
+                            dumpToken('DECSTBM', prerenderer);
                             break csi;
                         }
                         break;
                     case 0x73: /* s */
                         if (2 == groups.length) {
-                            dumpToken('DECSLRM');
+                            dumpToken('DECSLRM', prerenderer);
                             break csi;
                         }
                         break;
                     case 0x74: /* t */
                         if (3 == groups.length) {
-                            dumpToken('DECSLPP');
+                            dumpToken('DECSLPP', prerenderer);
                             break csi;
                         }
                         break;
@@ -1602,97 +1614,97 @@ define(function(require, exports, module) {
                     $stack.pop();
                     break;
                 case 0x40: /* @ */
-                    dumpToken('ICH', visitor);
+                    dumpToken('ICH', prerenderer);
                     break csi;
                 case 0x41: /* A */
-                    dumpToken('CUU', visitor);
+                    dumpToken('CUU', prerenderer);
                     break csi;
                 case 0x42: /* B */
-                    dumpToken('CUD', visitor);
+                    dumpToken('CUD', prerenderer);
                     break csi;
                 case 0x43: /* C */
-                    dumpToken('CUF', visitor);
+                    dumpToken('CUF', prerenderer);
                     break csi;
                 case 0x44: /* D */
-                    dumpToken('CUB', visitor);
+                    dumpToken('CUB', prerenderer);
                     break csi;
                 case 0x45: /* E */
-                    dumpToken('CNL', visitor);
+                    dumpToken('CNL', prerenderer);
                     break csi;
                 case 0x46: /* F */
-                    dumpToken('CPL', visitor);
+                    dumpToken('CPL', prerenderer);
                     break csi;
                 case 0x47: /* G */
-                    dumpToken('CHA', visitor);
+                    dumpToken('CHA', prerenderer);
                     break csi;
                 case 0x49: /* I */
-                    dumpToken('CHT', visitor);
+                    dumpToken('CHT', prerenderer);
                     break csi;
                 case 0x4A: /* J */
-                    dumpToken('ED', visitor);
+                    dumpToken('ED', prerenderer);
                     break csi;
                 case 0x4B: /* K */
-                    dumpToken('EL', visitor);
+                    dumpToken('EL', prerenderer);
                     break csi;
                 case 0x4C: /* L */
-                    dumpToken('IL', visitor);
+                    dumpToken('IL', prerenderer);
                     break csi;
                 case 0x4D: /* M */
-                    dumpToken('DL', visitor);
+                    dumpToken('DL', prerenderer);
                     break csi;
                 case 0x50: /* P */
-                    dumpToken('DCH', visitor);
+                    dumpToken('DCH', prerenderer);
                     break csi;
                 case 0x53: /* S */
-                    dumpToken('SU', visitor);
+                    dumpToken('SU', prerenderer);
                     break csi;
                 case 0x54: /* T */
-                    dumpToken('SD', visitor);
+                    dumpToken('SD', prerenderer);
                     break csi;
                 case 0x58: /* X */
-                    dumpToken('ECH', visitor);
+                    dumpToken('ECH', prerenderer);
                     break csi;
                 case 0x59: /* Z */
-                    dumpToken('CBT', visitor);
+                    dumpToken('CBT', prerenderer);
                     break csi;
                 case 0x60: /* ` */
-                    dumpToken('HPA', visitor);
+                    dumpToken('HPA', prerenderer);
                     break csi;
                 case 0x61: /* a */
-                    dumpToken('HPR', visitor);
+                    dumpToken('HPR', prerenderer);
                     break csi;
                 case 0x63: /* c */
-                    dumpToken('DA', visitor);
+                    dumpToken('DA', prerenderer);
                     break csi;
                 case 0x64: /* d */
-                    dumpToken('VPA', visitor);
+                    dumpToken('VPA', prerenderer);
                     break csi;
                 case 0x65: /* e */
-                    dumpToken('VPR', visitor);
+                    dumpToken('VPR', prerenderer);
                     break csi;
                 case 0x67: /* g */
-                    dumpToken('TBC', visitor);
+                    dumpToken('TBC', prerenderer);
                     break csi;
                 case 0x68: /* h */
-                    dumpToken('SM', visitor);
+                    dumpToken('SM', prerenderer);
                     break csi;
                 case 0x69: /* i */
-                    dumpToken('MC', visitor);
+                    dumpToken('MC', prerenderer);
                     break csi;
                 case 0x6A: /* j */
-                    dumpToken('HPB', visitor);
+                    dumpToken('HPB', prerenderer);
                     break; csi
                 case 0x6B: /* k */
-                    dumpToken('VPB', visitor);
+                    dumpToken('VPB', prerenderer);
                     break; csi
                 case 0x6C: /* l */
-                    dumpToken('RM', visitor);
+                    dumpToken('RM', prerenderer);
                     break csi;
                 case 0x6D: /* m */
-                    dumpToken('SGR', visitor);
+                    dumpToken('SGR', prerenderer);
                     break csi;
                 case 0x6E: /* n */
-                    dumpToken('DSR', visitor);
+                    dumpToken('DSR', prerenderer);
                     break; csi
                 }
 
@@ -1711,15 +1723,15 @@ define(function(require, exports, module) {
                     case 0x74: /* t */
                         c = reader.read();
                         $stack.push(Char(c));
-                        dumpToken('TTIMEST', visitor);
+                        dumpToken('TTIMEST', prerenderer);
                         break csi;
                     }
                     break;
                 case 0x72: /* r */
-                    dumpToken('TTIMERS', visitor);
+                    dumpToken('TTIMERS', prerenderer);
                     break csi;
                 case 0x73: /* s */
-                    dumpToken('TTIMESV', visitor);
+                    dumpToken('TTIMESV', prerenderer);
                     break csi;
                 }
 
@@ -1735,7 +1747,7 @@ define(function(require, exports, module) {
                     case 0x63: /* c */
                         c = reader.read();
                         $stack.push(Char(c));
-                        dumpToken('DA3', visitor);
+                        dumpToken('DA3', prerenderer);
                         break csi;
                     }
                     break;
@@ -1746,6 +1758,12 @@ define(function(require, exports, module) {
             case 0x3E: /* > */
                 c = reader.read();
                 $stack.push(Char(c));
+
+                switch (c) {
+                case 0x63: /* c */
+                    dumpToken('DA2', prerenderer);
+                    break csi;
+                }
 
                 if (isDigit(c)) {
                     var attr = c - 30;
@@ -1762,7 +1780,7 @@ define(function(require, exports, module) {
 
                             if (matches = ahead.match(/^((;\d){4})J$/)) {
                                 reader.reads(9, $stack);
-                                dumpToken('UNDEFINED', visitor);
+                                dumpToken('UNDEFINED', prerenderer);
                                 break csi;
                             }
 
@@ -1770,7 +1788,7 @@ define(function(require, exports, module) {
 
                             if (matches = ahead.match(/^((;\d){2})K$/)) {
                                 reader.reads(9, $stack);
-                                dumpToken('UNDEFINED', visitor);
+                                dumpToken('UNDEFINED', prerenderer);
                                 break csi;
                             }
 
@@ -1792,7 +1810,7 @@ define(function(require, exports, module) {
                             if (isDigit(c) && 0x4B == reader.peak()) {
                                 c = reader.read();
                                 $stack.push(Char(c));
-                                dumpToken('UNDEFINED', visitor);
+                                dumpToken('UNDEFINED', prerenderer);
                                 break csi;
                             }
 
@@ -1806,7 +1824,7 @@ define(function(require, exports, module) {
                     case 0x63: /* c */
                         c = reader.read();
                         $stack.push(Char(c));
-                        dumpToken('DA2', visitor);
+                        dumpToken('DA2', prerenderer);
                         break csi;
                     }
                 } else {
@@ -1815,23 +1833,60 @@ define(function(require, exports, module) {
                 }
 
                 break;
+            case 0x3F: /* ? */
+                do {
+                    c = reader.read();
+                    $stack.push(Char(c));
+                } while (isDigit(c) || 0x3B == c);
+
+                switch (c) {
+                case 0x4A: /* J */
+                    dumpToken('DECSED', prerenderer);
+                    break csi;
+                case 0x4B: /* K */
+                    dumpToken('DECSEL', prerenderer);
+                    break csi;
+                case 0x68: /* h */
+                    dumpToken('DECSET', prerenderer);
+                    break csi;
+                case 0x69: /* i */
+                    dumpToken('DECMC', prerenderer);
+                    break csi;
+                case 0x6C: /* l */
+                    dumpToken('DECRST', prerenderer);
+                    break csi;
+                case 0x6E: /* n */
+                    dumpToken('DECDSR', prerenderer);
+                    break csi;
+                }
+
+                break;
+            case 0x48: /* H */
+                dumpToken('CUP', prerenderer);
+                break csi;
+            case 0x4A: /* J */
+                dumpToken('ED', prerenderer);
+                break csi;
+            case 0x4B: /* K */
+                dumpToken('EL', prerenderer);
+                break csi;
             case 0x68: /* h */
-                dumpToken('SM', visitor);
+                dumpToken('SM', prerenderer);
                 break;
             case 0x69: /* i */
-                dumpToken('MC', visitor);
+                dumpToken('MC', prerenderer);
                 break;
             case 0x6C: /* l */
-                dumpToken('RM', visitor);
+                dumpToken('RM', prerenderer);
                 break;
             case 0x6D: /* m */
-                dumpToken('SGR', visitor);
+                dumpToken('SGR', prerenderer);
                 break;
             case 0x73: /* s */
-                dumpToken('SCP', visitor);
+                dumpToken('SCP', prerenderer);
                 break;
             case 0x75: /* u */
-                dumpToken('RCP', visitor);
+                dumpToken('RCP', prerenderer);
                 break;
             default:
                 break;
@@ -1841,7 +1896,7 @@ define(function(require, exports, module) {
         /**
          * Parse operating system command sequence
          */
-        function parseOSCSequence(reader, visitor) {
+        function parseOSCSequence(reader, prerenderer) {
             var c = 0;
 
             loop : while (true) {
@@ -1856,7 +1911,7 @@ define(function(require, exports, module) {
                 $stack.push(Char(c));
             }
 
-            dumpToken('OSC', visitor);
+            dumpToken('OSC', prerenderer);
         }
 
         /**
@@ -1864,10 +1919,10 @@ define(function(require, exports, module) {
          * 
          * @param type {@link String} or {@link Object}
          *           Token type or an token instance
-         * @param visitor {@link Function}
-         *           A token visitor
+         * @param prerenderer {@link Function}
+         *           A token prerenderer
          */
-        function dumpToken(type, visitor) {
+        function dumpToken(type, prerenderer) {
             var token = null;
 
             if ('object' === typeof type) {
@@ -1879,10 +1934,32 @@ define(function(require, exports, module) {
                 };
             }
 
-            visitor && visitor(token);
+            prerenderer.prerender(token);
         }
 
     };
+
+    /**
+     * ANSI token prerenderer
+     * 
+     * @param renderer {@link Function}
+     *           Customized renderer
+     */
+    var Prerenderer = function(renderer) {
+        var $renderer = renderer || function(token) {
+            console.log(JSON.stringify(token));
+        };
+
+        this.prerender = function(token) {
+            switch (token.type) {
+            case 'OSC':
+                token.title = token.image.replace(/\u001b]0;/, '');
+                break;
+            }
+
+            $renderer && $renderer(token);
+        };
+    }
 
     module.exports = ANSIParser;
 

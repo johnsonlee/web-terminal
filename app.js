@@ -57,7 +57,7 @@ socketManager.sockets.on('connection', function(socket) {
 
     socket.on('send', function(data) {
         console.log('received data: ' + JSON.stringify(data));
-        bash.write(data.message + '\r');
+        bash.write(data.message);
     });
 });
 
