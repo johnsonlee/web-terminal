@@ -39,7 +39,11 @@ define(function(require, exports, module) {
             $pos = Math.max(0, $pos - n);
         };
 
-        this.peak = function(n) {
+        this.peak = function() {
+            return $text.charCodeAt($pos);
+        };
+
+        this.peaks = function(n) {
             return $text.substr($pos, n || 1);
         };
     };

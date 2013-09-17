@@ -782,78 +782,113 @@ define(function(require, exports, module) {
     var LinkedList = require('www/linkedlist');
     var StringReader = require('www/stringreader');
 
-    var TOKEN_TYPE = [
-        'C0_CONTROL',
-        'SPACE',
-        'INTERMEDIATE', /*  !"#$%&'()*+,-./ */
-        'PARAMETERS',   /* 0123456789:;<=>? */
-        'UPPERCASE',
-        'LOWERCASE',
-        'ALPHABETIC',
-        'DELETE',
-        'C1_CONTROL',
-        'G1_DISPLAYABLE',
-        'SPECIAL',
-    ];
+    var Char = function(c) {
+        return String.fromCharCode(c);
+    }
 
+    function isDigit(c) {
+        return 0x30 <= c && c <= 0x39;
+    }
+
+    /**
+     * Test whether the specified character is C0 control character
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isC0(c) {
         return 0x00 <= c && c <= 0x1F;
     }
 
+    /**
+     * Test whether the specified character is C1 control character
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isC1(c) {
         return 0x80 <= c && c <= 0x9F;
     }
 
+    /**
+     * Test whether the specified character is control character
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
+    function isCtrlChar(c) {
+        return isC0(c) || isC1(c);
+    }
+
+    /**
+     * Test whether the specified character is intermediate character
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isIntermediate(c) {
         return 0x20 <= c && c <= 0x2F;
     }
 
+    /**
+     * Test whether the specified character is parameter character
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isParameter(c) {
         return 0x30 <= c && c <= 0x3F;
     }
 
+    /**
+     * Test whether the specified character is upper case
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isUpperCase(c) {
         return 0x40 <= c && c <= 0x5F;
     }
 
+    /**
+     * Test whether the specified character is lower case
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isLowerCase(c) {
         return 0x60 <= c && c <= 0x7E;
     }
 
+    /**
+     * Test whether the specified character is alphabet
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isAlphabet(c) {
         return isUpperCase(c) || isLowerCase(c);
     }
 
+    /**
+     * Test whether the specified character is DELETE
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isDelete(c) {
         return 0x7F == c;
     }
 
+    /**
+     * Test whether the specified character is G1 control characters
+     * 
+     * @param c {@link Number}
+     *           ASCII code of a character
+     */
     function isG1(c) {
         return 0xA1 <= c && c <= 0xFE;
     }
-
-    var TokenIterator = function(tokens) {
-        var $index = 0;
-        var $tokens = tokens;
-
-        Object.defineProperty(this, 'next', {
-            get : function() {
-                if ($index >= $tokens.length)
-                    return null;
-
-                return $tokens[++$index];
-            }
-        });
-
-        Object.defineProperty(this, 'prev', {
-            get : function() {
-                if ($index <= 0)
-                    return null;
-
-                return $tokens[--$index];
-            }
-        });
-    };
 
     /**
      * ANSI sequence parser
@@ -866,180 +901,985 @@ define(function(require, exports, module) {
             var tokens = new Array();
             var reader = new StringReader(input);
 
-            loop:
-            while (true) {
-                c = reader.read()
-                $stack.push(String.fromCharCode(c));
-
-                switch (c) {
-                case 0x1B: // <ESC>
-                    c = reader.read();
-                    $stack.push(String.fromCharCode(c));
-
-                    switch (c) {
-                    case 91: /* [ */
-                        parseControlSequence.call(this, reader, visitor);
-                        break;
-                    case 93: /* ] */
-                        
-                        break;
-                    default:
-                        parseEscapeSequence.call(this, reader, visitor);
-                        break;
-                    }
-
-                    break;
-                case 0x9B: // <CSI>
-                    parseCSI.call(this, reader, visitor);
-                    break;
-                default:
-                    if (isNaN(c)) {
-                        break loop;
-                    }
+            while (!isNaN(c = reader.read())) {
+                if (!isCtrlChar(c)) {
+                    $stack.push(Char(c));
+                    continue;
                 }
+
+                reader.unread();
+
+                if (!$stack.empty) {
+                    dumpToken('TEXT', visitor);
+                }
+
+                parseCtrlChar.call(this, reader, visitor);
             }
 
             console.log('Parsing finished');
         };
 
         /**
+         * Parse control character
+         */
+        function parseCtrlChar(reader, visitor) {
+            var c = reader.read();
+
+            $stack.push(Char(c));
+
+            switch (c) {
+            case 0x00:
+                dumpToken('NUL', visitor);
+                break;
+            case 0x01:
+                dumpToken('SOH', visitor);
+                break;
+            case 0x02:
+                dumpToken('STX', visitor);
+                break;
+            case 0x03:
+                dumpToken('ETX', visitor);
+                break;
+            case 0x04:
+                dumpToken('EOT', visitor);
+                break;
+            case 0x05: 
+                dumpToken('ENQ', visitor);
+                break;
+            case 0x06: 
+                dumpToken('ACK', visitor);
+                break;
+            case 0x07: 
+                dumpToken('BEL', visitor);
+                break;
+            case 0x08: 
+                dumpToken('BS', visitor);
+                break;
+            case 0x09: 
+                dumpToken('HT', visitor);
+                break;
+            case 0x0A: 
+                dumpToken('LF', visitor);
+                break;
+            case 0x0B: 
+                dumpToken('VT', visitor);
+                break;
+            case 0x0C: 
+                dumpToken('FF', visitor);
+                break;
+            case 0x0D: 
+                dumpToken('CR', visitor);
+                break;
+            case 0x0E: 
+                dumpToken('SO', visitor);
+                break;
+            case 0x0F: 
+                dumpToken('SI', visitor);
+                break;
+            case 0x10: 
+                dumpToken('DLE', visitor);
+                break;
+            case 0x11: 
+                dumpToken('DC1', visitor);
+                break;
+            case 0x12: 
+                dumpToken('DC2', visitor);
+                break;
+            case 0x13:
+                dumpToken('DC3', visitor);
+                break;
+            case 0x14: 
+                dumpToken('DC4', visitor);
+                break;
+            case 0x15: 
+                dumpToken('NAK', visitor);
+                break;
+            case 0x16: 
+                dumpToken('SYN', visitor);
+                break;
+            case 0x17: 
+                dumpToken('ETB', visitor);
+                break;
+            case 0x18: 
+                dumpToken('CAN', visitor);
+                break;
+            case 0x19: 
+                dumpToken('EM', visitor);
+                break;
+            case 0x1A: 
+                dumpToken('SUB', visitor);
+                break;
+            case 0x1B: 
+                parseEscapeSequence.call(this, reader, visitor);
+                break;
+            case 0x1C: 
+                dumpToken('FS', visitor);
+                break;
+            case 0x1D: 
+                dumpToken('GS', visitor);
+                break;
+            case 0x1E: 
+                dumpToken('RS', visitor);
+                break;
+            case 0x1F: 
+                dumpToken('US', visitor);
+                break;
+            case 0x80: 
+                dumpToken('PAD', visitor);
+                break;
+            case 0x81: 
+                dumpToken('HOP', visitor);
+                break;
+            case 0x82: 
+                dumpToken('BPH', visitor);
+                break;
+            case 0x83: 
+                dumpToken('NBH', visitor);
+                break;
+            case 0x84: 
+                dumpToken('IND', visitor);
+                break;
+            case 0x85: 
+                dumpToken('NEL', visitor);
+                break;
+            case 0x86: 
+                dumpToken('SSA', visitor);
+                break;
+            case 0x87: 
+                dumpToken('ESA', visitor);
+                break;
+            case 0x88: 
+                dumpToken('HTS', visitor);
+                break;
+            case 0x89: 
+                dumpToken('HTJ', visitor);
+                break;
+            case 0x8A: 
+                dumpToken('VTS', visitor);
+                break;
+            case 0x8B: 
+                dumpToken('PLD', visitor);
+                break;
+            case 0x8C: 
+                dumpToken('PLU', visitor);
+                break;
+            case 0x8D: 
+                dumpToken('RI', visitor);
+                break;
+            case 0x8E: 
+                dumpToken('SS2', visitor);
+                break;
+            case 0x8F: 
+                dumpToken('SS3', visitor);
+                break;
+            case 0x90: 
+                dumpToken('DCS', visitor);
+                break;
+            case 0x91: 
+                dumpToken('PU1', visitor);
+                break;
+            case 0x92: 
+                dumpToken('PU2', visitor);
+                break;
+            case 0x93: 
+                dumpToken('STS', visitor);
+                break;
+            case 0x94: 
+                dumpToken('CCH', visitor);
+                break;
+            case 0x95: 
+                dumpToken('MW', visitor);
+                break;
+            case 0x96: 
+                dumpToken('SPA', visitor);
+                break;
+            case 0x97: 
+                dumpToken('EPA', visitor);
+                break;
+            case 0x98: 
+                dumpToken('SOS', visitor);
+                break;
+            case 0x99: 
+                dumpToken('SGCI', visitor);
+                break;
+            case 0x9A: 
+                dumpToken('SCI', visitor);
+                break;
+            case 0x9B: 
+                dumpToken('CSI', visitor);
+                break;
+            case 0x9C: 
+                dumpToken('ST', visitor);
+                break;
+            case 0x9D: 
+                dumpToken('OSC', visitor);
+                break;
+            case 0x9E: 
+                dumpToken('PM', visitor);
+                break;
+            case 0x9F: 
+                dumpToken('APC', visitor);
+                break;
+            }
+        }
+
+        /**
          * Parse Escape Sequence, A two or three character string staring
          * with ESCape.
          */
         function parseEscapeSequence(reader, visitor) {
-            var c = reader.read();
+            var c = reader.peak();
 
-            $stack.push(String.fromCharCode(c));
+            if (isCtrlChar(c)) {
+                parseCtrlChar.call(this, reader, visitor);
+                return;
+            }
 
-            if (isC0(c)) {
-            } else if (isIntermediate(c)) {
-            } else if (isParameter(c)) {
-            } else if (isUpperCase(c)) {
-            } else if (isLowerCase(c)) {
-            } else if (isDelete(c)) {
-            } else if (isC1(c)) {
-            } else if (isG1(c)) {
-            } else {
+            $stack.push(Char(c));
+
+            esc:
+            switch (reader.read()) {
+            case 0x20: /* SPACE */
+                switch (c = reader.read()) {
+                case 0x46:
+                    $stack.push(Char(c));
+                    dumpToken('S7C1T', visitor);
+                    break esc;
+                case 0x47:
+                    $stack.push(Char(c));
+                    dumpToken('S8C1T', visitor);
+                    break esc;
+                }
+
+                reader.unread();
+                break;
+            case 0x21: /* ! */
+                dumpToken('CZD', visitor);
+                break;
+            case 0x22: /* " */
+                dumpToken('C1D', visitor);
+                break;
+            case 0x23: /* # */
+                switch (c = reader.read()) {
+                case 0x38: /* 8 */
+                    $stack.push(Char(c));
+                    dumpToken('DECALN', visitor);
+                    break esc;
+                }
+
+                reader.unread();
+                break;
+            case 0x24: /* $ */
+                c = reader.read();
+                $stack.push(Char(c));
+
+                switch (c) {
+                case 0x28: /* ( */
+                    dumpToken('GZDM4', visitor);
+                    break esc;
+                case 0x29: /* ) */
+                    dumpToken('G1DM4', visitor);
+                    break esc;
+                case 0x2A: /* * */
+                    dumpToken('G2DM4', visitor);
+                    break esc;
+                case 0x2B: /* + */
+                    dumpToken('G3DM4', visitor);
+                    break esc;
+                case 0x2D: /* - */
+                    dumpToken('G1DM6', visitor);
+                    break esc;
+                case 0x2E: /* . */
+                    dumpToken('G2DM6', visitor);
+                    break esc;
+                case 0x2F: /* / */
+                    dumpToken('G3DM6', visitor);
+                    break esc;
+                }
+
+                $stack.pop();
+                reader.unread();
+                break;
+            case 0x25: /* % */
+                switch (c = reader.read()) {
+                case 0x2F: /* / */
+                    $stack.push(Char(c));
+                    break;
+                default:
+                    reader.unread();
+                    break;
+                }
+
+                dumpToken('DOCS', visitor);
+                break;
+            case 0x26: /* & */
+                break;
+            case 0x27: /* ' */
+                break;
+            case 0x28: /* ( */
+                dumpToken('GZD4', visitor);
+                break;
+            case 0x29: /* ) */
+                dumpToken('G1D4', visitor);
+                break;
+            case 0x2A: /* * */
+                dumpToken('G2D4', visitor);
+                break;
+            case 0x2B: /* + */
+                dumpToken('G3D4', visitor);
+                break;
+            case 0x2C: /* , */
+                break;
+            case 0x2D: /* - */
+                dumpToken('G1D6', visitor);
+                break;
+            case 0x2E: /* . */
+                dumpToken('G2D6', visitor);
+                break;
+            case 0x2F: /* / */
+                dumpToken('G3D6', visitor);
+                break;
+            case 0x30: /* 0 */
+                break;
+            case 0x31: /* 1 */
+                break;
+            case 0x32: /* 2 */
+                break;
+            case 0x33: /* 3 */
+                break;
+            case 0x34: /* 4 */
+                break;
+            case 0x35: /* 5 */
+                break;
+            case 0x36: /* 6 */
+                dumpToken('DECBI', visitor);
+                break;
+            case 0x37: /* 7 */
+                dumpToken('DECSC', visitor);
+                break;
+            case 0x38: /* 8 */
+                dumpToken('DECRC', visitor);
+                break;
+            case 0x39: /* 9 */
+                break;
+            case 0x3A: /* : */
+                break;
+            case 0x3B: /* ; */
+                break;
+            case 0x3C: /* < */
+                break;
+            case 0x3D: /* = */
+                dumpToken('DECKPAM', visitor);
+                break;
+            case 0x3E: /* > */
+                dumpToken('DECKPNM', visitor);
+                break;
+            case 0x3F: /* ? */
+                break;
+            case 0x40: /* @ */
+                break;
+            case 0x41: /* A */
+                break;
+            case 0x42: /* B */
+                break;
+            case 0x43: /* C */
+                break;
+            case 0x44: /* D */
+                dumpToken('IND', visitor);
+                break;
+            case 0x45: /* E */
+                dumpToken('NEL', visitor);
+                break;
+            case 0x46: /* F */
+                break;
+            case 0x47: /* G */
+                break;
+            case 0x48: /* H */
+                dumpToken('HTS', visitor);
+                break;
+            case 0x49: /* I */
+                break;
+            case 0x4A: /* J */
+                break;
+            case 0x4B: /* K */
+                break;
+            case 0x4C: /* L */
+                break;
+            case 0x4D: /* M */
+                dumpToken('RI', visitor);
+                break;
+            case 0x4E: /* N */
+                dumpToken('SS2', visitor);
+                break;
+            case 0x4F: /* O */
+                dumpToken('SS3', visitor);
+                break;
+            case 0x50: /* P */
+                parseDCSSequence.call(this, reader, visitor);
+                break;
+            case 0x51: /* Q */
+                break;
+            case 0x52: /* R */
+                break;
+            case 0x53: /* S */
+                break;
+            case 0x54: /* T */
+                break;
+            case 0x55: /* U */
+                break;
+            case 0x56: /* V */
+                break;
+            case 0x57: /* W */
+                break;
+            case 0x58: /* X */
+                parseSOSSequence.call(this, reader, visitor);
+                break;
+            case 0x59: /* Y */
+                break;
+            case 0x5A: /* Z */
+                dumpToken('DECID', visitor);
+                break;
+            case 0x5B: /* [ */
+                parseCSISequence.call(this, reader, visitor);
+                break;
+            case 0x5C: /* \ */
+                // String terminator, ends a DCS, SOS, OSC, PM and APC sequence
                 throw new SyntaxError('Unexpected token: ' + $stack.toString());
+            case 0x5D: /* ] */
+                parseOSCSequence.call(this, reader, visitor);
+                break;
+            case 0x5E: /* ^ */
+                parsePMSequence.call(this, reader, visitor);
+                break;
+            case 0x5F: /* _ */
+                parseAPCSequence.call(this, reader, visitor);
+                break;
+            case 0x60: /* ` */
+                break;
+            case 0x61: /* a */
+                break;
+            case 0x62: /* b */
+                break;
+            case 0x63: /* c */
+                dumpToken('RIS', visitor);
+                break;
+            case 0x64: /* d */
+                break;
+            case 0x65: /* e */
+                break;
+            case 0x66: /* f */
+                break;
+            case 0x67: /* g */
+                // TODO Visible Bell
+                break;
+            case 0x68: /* h */
+                break;
+            case 0x69: /* i */
+                break;
+            case 0x6A: /* j */
+                break;
+            case 0x6C: /* l */
+                break;
+            case 0x6B: /* k */
+                break;
+            case 0x6D: /* m */
+                break;
+            case 0x6E: /* n */
+                dumpToken('LS2', visitor);
+                break;
+            case 0x6F: /* o */
+                dumpToken('LS3', visitor);
+                break;
+            case 0x70: /* p */
+                break;
+            case 0x71: /* q */
+                break;
+            case 0x72: /* r */
+                break;
+            case 0x73: /* s */
+                break;
+            case 0x74: /* t */
+                break;
+            case 0x75: /* u */
+                break;
+            case 0x76: /* v */
+                break;
+            case 0x77: /* w */
+                break;
+            case 0x78: /* x */
+                break;
+            case 0x79: /* y */
+                break;
+            case 0x7A: /* z */
+                break;
+            case 0x7B: /* { */
+                break;
+            case 0x7C: /* | */
+                dumpToken('LS3R', visitor);
+                break;
+            case 0x7D: /* } */
+                dumpToken('LS2R', visitor);
+                break;
+            case 0x7E: /* ~ */
+                dumpToken('LS1R', visitor);
+                break;
             }
         }
 
-        function parseC0(reader, visitor) {
+        /**
+         * Parse CSI sequence
+         */
+        function parseCSISequence(reader, visitor) {
             var c = reader.read();
 
-            $stack.push(String.fromCharCode(c));
+            $stack.push(Char(c));
 
+            csi:
             switch (c) {
-            case 0x00: /*   */
+            case 0x27: /* ' */
+                if (0x7B == reader.peak()) {
+                    c = reader.read();
+                    $stack.push(Char(c));
+                    dumpToken('DECSLE', visitor);
+                }
                 break;
-            case 0x01: /*   */
+            case 0x30: /* 0 */
+            case 0x31: /* 1 */
+            case 0x32: /* 2 */
+            case 0x33: /* 3 */
+            case 0x34: /* 4 */
+            case 0x35: /* 5 */
+            case 0x36: /* 6 */
+            case 0x37: /* 7 */
+            case 0x38: /* 8 */
+            case 0x39: /* 9 */
+                do {
+                    c = reader.read();
+                    $stack.push(Char(c));
+                } while (isDigit(c));
+
+                switch (c) {
+                case 0x24: /* $ */
+                    c = reader.read();
+                    $stack.push(Char(c));
+
+                    switch (c) {
+                    case 0x7D: /* } */
+                        dumpToken('DECSASD');
+                        break csi;
+                    case 0x7E: /* ~ */
+                        dumpToken('DECSSDT');
+                        break csi;
+                    }
+
+                    $stack.pop();
+                    reader.unread();
+                    break;
+                case 0x27: /* ' */
+                    if (0x7B == reader.peak()) {
+                        c = creader.read();
+                        $stack.push(Char(c));
+                        break csi;
+                    }
+                    break;
+                case 0x3B: /* ; */
+                    while (true) {
+                        c = reader.read();
+
+                        if (0x3B != c && !isDigit(c)) {
+                            break; 
+                        }
+
+                        $stack.push(Char(c));
+                    }
+
+                    reader.unread();
+
+                    if (0x3B == c) {
+                        break; // the 2nd param is missing
+                    }
+
+                    var groups = 0;
+                    var matches = $stack.toString().match(/(\d+(;\d+))$/);
+
+                    if (!matches) {
+                        break;
+                    }
+
+                    c = reader.read();
+                    $stack.push(Char(c));
+                    groups = matches[1].split(';');
+
+                    switch (c) {
+                    case 0x22: /* " */
+                        if (2 == groups.length && 0x70 == reader.peak()) {
+                            dumpToken('DECSCL', visitor);
+                            break csi;
+                        }
+                        break;
+                    case 0x24: /* $ */
+                        if (4 == groups.length) {
+                            switch (reader.peak()) {
+                            case 0x7A: /* z */
+                                dumpToken('DECERA', visitor);
+                                break csi;
+                            case 0x7B: /* { */
+                                dumpToken('DECSERA', visitor);
+                                break csi;
+                            }
+                        }
+                        break;
+                    case 0x27: /* ' */
+                        c = reader.read();
+                        $stack.push(Char(c));
+
+                        switch (c) {
+                        case 0x24: /* $ */
+                            dumpToken('DECSLE', visitor);
+                            break csi;
+                        case 0x77: /* w */
+                            if (4 == groups.length) {
+                                dumpToken('DECEFR', visitor);
+                                break csi;
+                            }
+                            break;
+                        case 0x7A: /* z */
+                            if (2 == groups.length) {
+                                dumpToken('DECELR', visitor);
+                                break csi;
+                            }
+                            break;
+                        }
+
+                        $stack.pop();
+                        reader.unread();
+                        break;
+                    case 0x48: /* H */
+                        if (2 == groups.length) {
+                            dumpToken('CUP', visitor);
+                            break csi;
+                        }
+                        break;
+                    case 0x66: /* f */
+                        if (2 == groups.length) {
+                            dumpToken('HVP', visitor);
+                            break csi;
+                        }
+                        break;
+                    case 0x68: /* h */
+                        dumpToken('SM', visitor);
+                        break csi;
+                    case 0x69: /* i */
+                        dumpToken('MC', visitor);
+                        break csi;
+                    case 0x6C: /* l */
+                        dumpToken('RM', visitor);
+                        break csi;
+                    case 0x6D: /* m */
+                        dumpToken('SGR', visitor);
+                        break csi;
+                    case 0x73: /* r */
+                        if (2 == groups.length) {
+                            dumpToken('DECSTBM');
+                            break csi;
+                        }
+                        break;
+                    case 0x73: /* s */
+                        if (2 == groups.length) {
+                            dumpToken('DECSLRM');
+                            break csi;
+                        }
+                        break;
+                    case 0x74: /* t */
+                        if (3 == groups.length) {
+                            dumpToken('DECSLPP');
+                            break csi;
+                        }
+                        break;
+                    }
+
+                    reader.unread();
+                    $stack.pop();
+                    break;
+                case 0x40: /* @ */
+                    dumpToken('ICH', visitor);
+                    break csi;
+                case 0x41: /* A */
+                    dumpToken('CUU', visitor);
+                    break csi;
+                case 0x42: /* B */
+                    dumpToken('CUD', visitor);
+                    break csi;
+                case 0x43: /* C */
+                    dumpToken('CUF', visitor);
+                    break csi;
+                case 0x44: /* D */
+                    dumpToken('CUB', visitor);
+                    break csi;
+                case 0x45: /* E */
+                    dumpToken('CNL', visitor);
+                    break csi;
+                case 0x46: /* F */
+                    dumpToken('CPL', visitor);
+                    break csi;
+                case 0x47: /* G */
+                    dumpToken('CHA', visitor);
+                    break csi;
+                case 0x49: /* I */
+                    dumpToken('CHT', visitor);
+                    break csi;
+                case 0x4A: /* J */
+                    dumpToken('ED', visitor);
+                    break csi;
+                case 0x4B: /* K */
+                    dumpToken('EL', visitor);
+                    break csi;
+                case 0x4C: /* L */
+                    dumpToken('IL', visitor);
+                    break csi;
+                case 0x4D: /* M */
+                    dumpToken('DL', visitor);
+                    break csi;
+                case 0x50: /* P */
+                    dumpToken('DCH', visitor);
+                    break csi;
+                case 0x53: /* S */
+                    dumpToken('SU', visitor);
+                    break csi;
+                case 0x54: /* T */
+                    dumpToken('SD', visitor);
+                    break csi;
+                case 0x58: /* X */
+                    dumpToken('ECH', visitor);
+                    break csi;
+                case 0x59: /* Z */
+                    dumpToken('CBT', visitor);
+                    break csi;
+                case 0x60: /* ` */
+                    dumpToken('HPA', visitor);
+                    break csi;
+                case 0x61: /* a */
+                    dumpToken('HPR', visitor);
+                    break csi;
+                case 0x63: /* c */
+                    dumpToken('DA', visitor);
+                    break csi;
+                case 0x64: /* d */
+                    dumpToken('VPA', visitor);
+                    break csi;
+                case 0x65: /* e */
+                    dumpToken('VPR', visitor);
+                    break csi;
+                case 0x67: /* g */
+                    dumpToken('TBC', visitor);
+                    break csi;
+                case 0x68: /* h */
+                    dumpToken('SM', visitor);
+                    break csi;
+                case 0x69: /* i */
+                    dumpToken('MC', visitor);
+                    break csi;
+                case 0x6A: /* j */
+                    dumpToken('HPB', visitor);
+                    break; csi
+                case 0x6B: /* k */
+                    dumpToken('VPB', visitor);
+                    break; csi
+                case 0x6C: /* l */
+                    dumpToken('RM', visitor);
+                    break csi;
+                case 0x6D: /* m */
+                    dumpToken('SGR', visitor);
+                    break csi;
+                case 0x6E: /* n */
+                    dumpToken('DSR', visitor);
+                    break; csi
+                }
+
+                $stack.pop();
+                reader.unread();
+
                 break;
-            case 0x02: /*   */
+            case 0x3C: /* < */
+                c = reader.read();
+                $stack.push(Char(c));
+
+                switch (c) {
+                case 0x30: /* 0 */
+                case 0x31: /* 1 */
+                    switch (reader.peak()) {
+                    case 0x74: /* t */
+                        c = reader.read();
+                        $stack.push(Char(c));
+                        dumpToken('TTIMEST', visitor);
+                        break csi;
+                    }
+                    break;
+                case 0x72: /* r */
+                    dumpToken('TTIMERS', visitor);
+                    break csi;
+                case 0x73: /* s */
+                    dumpToken('TTIMESV', visitor);
+                    break csi;
+                }
+
+                reader.unread();
+                break csi;
+            case 0x3D: /* = */
+                c = reader.read();
+                $stack.push(Char(c));
+
+                switch (c) {
+                case 0x30:
+                    switch (reader.peak()) {
+                    case 0x63: /* c */
+                        c = reader.read();
+                        $stack.push(Char(c));
+                        dumpToken('DA3', visitor);
+                        break csi;
+                    }
+                    break;
+                }
+
+                reader.unread();
+                break csi;
+            case 0x3E: /* > */
+                c = reader.read();
+                $stack.push(Char(c));
+
+                if (isDigit(c)) {
+                    var attr = c - 30;
+
+                    // look ahead
+                    switch (reader.peak()) {
+                    case 0x3B: /* ; */
+                        switch (c) {
+                        case 0x33: /* 3 */
+                            var ahead = null;
+                            var matches = null;
+
+                            ahead = reader.peaks(9);
+
+                            if (matches = ahead.match(/^((;\d){4})J$/)) {
+                                reader.reads(9, $stack);
+                                dumpToken('UNDEFINED', visitor);
+                                break csi;
+                            }
+
+                            ahead = reader.peaks(5);
+
+                            if (matches = ahead.match(/^((;\d){2})K$/)) {
+                                reader.reads(9, $stack);
+                                dumpToken('UNDEFINED', visitor);
+                                break csi;
+                            }
+
+                            c = reader.read(); // the semicolons behind number
+                            $stack.push(Char(c));
+
+                            $stack.pop();
+                            reader.unread();
+                            $stack.pop();
+                            reader.unread();
+                            break;
+                        case 0x35: /* 5 */
+                            c = reader.read(); // the semicolons behind number
+                            $stack.push(Char(c));
+                            c = reader.read();
+                            $stack.push(Char(c));
+
+                            // CSI > 5 ; Ps K
+                            if (isDigit(c) && 0x4B == reader.peak()) {
+                                c = reader.read();
+                                $stack.push(Char(c));
+                                dumpToken('UNDEFINED', visitor);
+                                break csi;
+                            }
+
+                            $stack.pop();
+                            reader.unread();
+                            $stack.pop();
+                            reader.unread();
+                            break;
+                        }
+                        break;
+                    case 0x63: /* c */
+                        c = reader.read();
+                        $stack.push(Char(c));
+                        dumpToken('DA2', visitor);
+                        break csi;
+                    }
+                } else {
+                    reader.unread();
+                    $stack.pop();
+                }
+
                 break;
-            case 0x03: /*   */
+            case 0x68: /* h */
+                dumpToken('SM', visitor);
                 break;
-            case 0x04: /*   */
+            case 0x69: /* i */
+                dumpToken('MC', visitor);
                 break;
-            case 0x05: /*   */
+            case 0x6C: /* l */
+                dumpToken('RM', visitor);
                 break;
-            case 0x06: /*   */
+            case 0x6D: /* m */
+                dumpToken('SGR', visitor);
                 break;
-            case 0x07: /*   */
+            case 0x73: /* s */
+                dumpToken('SCP', visitor);
                 break;
-            case 0x08: /*   */
-                break;
-            case 0x09: /*   */
-                break;
-            case 0x0A: /*   */
-                break;
-            case 0x0B: /*   */
-                break;
-            case 0x0C: /*   */
-                break;
-            case 0x0D: /*   */
-                break;
-            case 0x0E: /*   */
-                break;
-            case 0x0F: /*   */
-                break;
-            case 0x10: /*   */
-                break;
-            case 0x11: /*   */
-                break;
-            case 0x12: /*   */
-                break;
-            case 0x13: /* \  */
-                break;
-            case 0x14: /*   */
-                break;
-            case 0x15: /*   */
-                break;
-            case 0x16: /*   */
-                break;
-            case 0x17: /*   */
-                break;
-            case 0x18: /*   */
-                break;
-            case 0x19: /*   */
-                break;
-            case 0x1A: /*   */
-                break;
-            case 0x1B: /*   */
-                break;
-            case 0x1C: /*   */
-                break;
-            case 0x1D: /*   */
-                break;
-            case 0x1E: /*   */
-                break;
-            case 0x1F: /*   */
+            case 0x75: /* u */
+                dumpToken('RCP', visitor);
                 break;
             default:
-                throw new SyntaxError('Unexpected token: ' + $stack.toString());
+                break;
             }
         }
 
         /**
-         * Parse control sequence, a control sequence, which starts with CSI
-         * character, has an indefinite length, and is terminated by an
-         * alphabetic character.
-         * 
-         * @param reader
-         * @param visitor
+         * Parse operating system command sequence
          */
-        function parseControlSequence(reader, visitor) {
+        function parseOSCSequence(reader, visitor) {
             var c = 0;
 
-            // except any parameter characters
-            while (isParameter(c = reader.read())) {
-                $stack.push(String.fromCharCode(c));
-            }
-
-            // The terminating character may be preceded
-            // by an intermediate character
-            do {
-                if (isIntermediate(c)) {
-                    $stack.push(String.fromCharCode(c));
+            loop : while (true) {
+                switch (c = reader.read()) {
+                case 0x07: /* BEL */
+                    reader.unread();
+                    break loop;
+                case 0x5C: /* \ String Terminator */
+                    break loop;
                 }
-            } while (c = reader.read());
 
-            // terminates with an alphabet
-            if (isAlphabet(c)) {
-                $stack.push(String.fromCharCode(c));
-                visitor && visitor({
-                    type : -1,
-                    image : $stack.dump(),
-                });
-            } else {
-                throw new SyntaxError('Unexpected token: ' + $stack.toString());
+                $stack.push(Char(c));
             }
+
+            dumpToken('OSC', visitor);
         }
 
         /**
-         * Parse CSI
+         * Dump the sequence in stack as a token
+         * 
+         * @param type {@link String} or {@link Object}
+         *           Token type or an token instance
+         * @param visitor {@link Function}
+         *           A token visitor
          */
-        function parseCSI(reader, visitor) {
-            var c = 0;
+        function dumpToken(type, visitor) {
+            var token = null;
+
+            if ('object' === typeof type) {
+                token = type;
+            } else {
+                token = {
+                    type : type,
+                    image : $stack.dump(),
+                };
+            }
+
+            visitor && visitor(token);
         }
 
     };

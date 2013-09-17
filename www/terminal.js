@@ -328,7 +328,7 @@ define(function(require, exports, module) {
 
             if ($stdout.length > 0) {
                 $parser.parse($stdout.data, function(token) {
-                    console.log(token.image);
+                    console.log(JSON.stringify(token));
                 });
                 $stdout.clear();
             }
