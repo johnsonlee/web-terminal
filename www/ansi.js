@@ -1952,6 +1952,9 @@ define(function(require, exports, module) {
 
         this.prerender = function(token) {
             switch (token.type) {
+            case 'ED':
+                token.value = token.image.replace(/\u001b](\d+)J/, '$1');
+                break;
             case 'OSC':
                 token.title = token.image.replace(/\u001b]0;/, '');
                 break;

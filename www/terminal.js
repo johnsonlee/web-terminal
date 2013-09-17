@@ -44,6 +44,11 @@ define(function(require, exports, module) {
                 return false;
             },
 
+            '9'  : function(event) {
+                $connection.emit('send', { message : '\t' });
+                return false;
+            },
+
             /**
              * ENTER
              */
@@ -113,6 +118,14 @@ define(function(require, exports, module) {
         var $renderers = {
             'BEL'  : function(token) {
                 console.log('\u0007');
+            },
+            'ED'   : function() {
+                while ($terminal.firstChild) {
+                    $terminal.removeChild($terminal.firstChild);
+                }
+
+                $row = 0;
+                $col = 0;
             },
             'LF'   : function() {
                 $col = 0;
