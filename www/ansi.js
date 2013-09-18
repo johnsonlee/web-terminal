@@ -1565,6 +1565,7 @@ define(function(require, exports, module) {
                     if (0x7B == reader.peak()) {
                         c = creader.read();
                         $stack.push(charof(c));
+                        dumpToken('DECSLE', prerenderer);
                         break csi;
                     }
                     break;
