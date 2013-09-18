@@ -161,7 +161,7 @@ define(function(require, exports, module) {
                     $contexts['SGR'] = ctx;
                 }
 
-                if (token.values[0]) {
+                if (token.values && token.values[0]) {
                     ctx.push(token);
                 } else {
                     ctx.pop();
@@ -178,6 +178,9 @@ define(function(require, exports, module) {
                     var sgr = sgrctx[sgrctx.length - 1];
 
                     for (var i = 0; i < sgr.values.length; i++) {
+                        if (!sgr.values)
+                            continue;
+
                         switch (sgr.values[i]) {
                         case 1:
                             styles.push('font-style:bold');

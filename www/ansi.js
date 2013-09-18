@@ -919,19 +919,126 @@ define(function(require, exports, module) {
          *          A token of ANSI sequence
          */
         this.prerender = function(token) {
+            var matches = null;
+
             switch (token.type) {
+            case 'ICH':
+                matches = token.image.match(/(\d+)@/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CUU':
+                matches = token.image.match(/(\d+)A/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CUD':
+                matches = token.image.match(/(\d+)B/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CUF':
+                matches = token.image.match(/(\d+)C/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CUB':
+                matches = token.image.match(/(\d+)D/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CNL':
+                matches = token.image.match(/(\d+)E/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CPL':
+                matches = token.image.match(/(\d+)F/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CHA':
+                matches = token.image.match(/(\d+)G/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CUP':
+                matches = token.image.match(/(\d*);(\d*)H$/);
+
+                if (matches) {
+                    token.values = [
+                        parseInt(matches[1]),
+                        parseInt(matches[2])
+                    ];
+                } else {
+                    token.values = [1, 1];
+                }
+                break;
+            case 'CHT':
+                matches = token.image.match(/(\d+)I/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
             case 'ED':
-                token.value = token.image.replace(/^\u001b\](\d+)J$/, '$1');
+                matches = token.image.match(/(\d+)J$/);
+                token.value = matches ? parseInt(matches[1]) : 0;
+                break;
+            case 'EL':
+                matches = token.image.match(/(\d+)K$/);
+                token.value = matches ? parseInt(matches[1]) : 0;
+                break;
+            case 'IL':
+                matches = token.image.match(/(\d+)L$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'DL':
+                matches = token.image.match(/(\d+)M$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'DCH':
+                matches = token.image.match(/(\d+)P$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'SU':
+                matches = token.image.match(/(\d+)S$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'SD':
+                matches = token.image.match(/(\d+)T$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'ECH':
+                matches = token.image.match(/(\d+)X$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'CBT':
+                matches = token.image.match(/(\d+)Z$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'HPA':
+                matches = token.image.match(/(\d+)`$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'HPR':
+                matches = token.image.match(/(\d+)a$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'DA':
+                matches = token.image.match(/(\d+)c$/);
+                token.value = matches ? parseInt(matches[1]) : 0;
+                break;
+            case 'VPA':
+                matches = token.image.match(/(\d+)d$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
+                break;
+            case 'VPR':
+                matches = token.image.match(/(\d+)e$/);
+                token.value = matches ? parseInt(matches[1]) : 1;
                 break;
             case 'OSC':
-                token.title = token.image.replace(/^\u001b\]0;/, '');
+                token.title = token.image.replace(/^\u001b\]\d+;/, '');
                 break;
             case 'SGR':
-                token.values = token.image.replace(/^\u001b\[([^m]+)m$/, '$1');
-                token.values = token.values.split(';');
+                matches = token.image.match(/^\u001b\[([^m]+)m$/);
 
-                for (var i = 0; i < token.values.length; i++) {
-                    token.values[i] = parseInt(token.values[i]);
+                if (matches) {
+                    token.values = [];
+                    matches = matches[1].split(';');
+
+                    for (var i = 0; i < matches.length; i++) {
+                        token.values[i] = parseInt(matches[i]);
+                    }
                 }
                 break;
             }
