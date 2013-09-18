@@ -779,19 +779,30 @@
 define(function(require, exports, module) {
 
     var Stack = require('www/stack');
-    var LinkedList = require('www/linkedlist');
     var StringReader = require('www/stringreader');
 
-    var Char = function(c) {
+    /**
+     * Convert ASCII code to char
+     * 
+     * @param c {@link Number}
+     *          ASCII code
+     */
+    function charof(c) {
         return String.fromCharCode(c);
     }
 
+    /**
+     * Test whether the specified ASCII code represents a digit
+     * 
+     * @param c {@link Number}
+     *          ASCII code of a character
+     */
     function isDigit(c) {
         return 0x30 <= c && c <= 0x39;
     }
 
     /**
-     * Test whether the specified character is C0 control character
+     * Test whether the specified ASCII code represents a C0 control character
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -801,7 +812,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is C1 control character
+     * Test whether the specified ASCII code represents a C1 control character
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -811,7 +822,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is control character
+     * Test whether the specified ASCII code represents a control character
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -821,7 +832,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is intermediate character
+     * Test whether the specified ASCII code represents an intermediate character
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -831,7 +842,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is parameter character
+     * Test whether the specified ASCII code represents a parameter character
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -841,7 +852,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is upper case
+     * Test whether the specified ASCII code represents an upper case
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -851,7 +862,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is lower case
+     * Test whether the specified ASCII code represents a lower case
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -861,7 +872,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is alphabet
+     * Test whether the specified ASCII code represents an alphabet
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -871,7 +882,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is DELETE
+     * Test whether the specified ASCII code represents the DELETE control code
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -881,7 +892,7 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Test whether the specified character is G1 control characters
+     * Test whether the specified ASCII code represents a G1 control code
      * 
      * @param c {@link Number}
      *           ASCII code of a character
@@ -891,11 +902,59 @@ define(function(require, exports, module) {
     }
 
     /**
-     * ANSI sequence parser
+     * ANSI token prerenderer
+     * 
+     * @param renderer {@link Function}
+     *           Customized renderer
+     */
+    var Prerenderer = function(renderer) {
+        var $renderer = renderer || function(token) {
+            console.log(JSON.stringify(token));
+        };
+
+        /**
+         * Prerender the specified token, parse the parameters
+         * 
+         * @param token {@link Object}
+         *          A token of ANSI sequence
+         */
+        this.prerender = function(token) {
+            switch (token.type) {
+            case 'ED':
+                token.value = token.image.replace(/^\u001b\](\d+)J$/, '$1');
+                break;
+            case 'OSC':
+                token.title = token.image.replace(/^\u001b\]0;/, '');
+                break;
+            case 'SGR':
+                token.values = token.image.replace(/^\u001b\[([^m]+)m$/, '$1');
+                token.values = token.values.split(';');
+
+                for (var i = 0; i < token.values.length; i++) {
+                    token.values[i] = parseInt(token.values[i]);
+                }
+                break;
+            }
+
+            $renderer(token);
+        };
+    };
+
+    /**
+     * ANSI sequence parser for terminal
      */
     var ANSIParser = function() {
         var $stack = new Stack();
 
+        /**
+         * Parse the input string as tokens and then call renderer
+         * to rendereach token sequentially.
+         * 
+         * @param input {@link String}
+         *           Input string
+         * @param renderer {@link Function}
+         *           The token renderer
+         */
         this.parse = function(input, renderer) {
             var c = 0;
             var tokens = new Array();
@@ -907,7 +966,7 @@ define(function(require, exports, module) {
                     c = reader.read();
 
                     if (!isCtrlChar(c)) {
-                        $stack.push(Char(c));
+                        $stack.push(charof(c));
                         continue;
                     }
 
@@ -933,11 +992,16 @@ define(function(require, exports, module) {
 
         /**
          * Parse control character
+         * 
+         * @param reader {@link StringReader}
+         *           A string reader which provides the inputs
+         * @param prerenderer {@link Prerenderer}
+         *           A token prerenderer
          */
         function parseCtrlChar(reader, prerenderer) {
             var c = reader.read();
 
-            $stack.push(Char(c));
+            $stack.push(charof(c));
 
             switch (c) {
             case 0x00:
@@ -1138,6 +1202,11 @@ define(function(require, exports, module) {
         /**
          * Parse Escape Sequence, A two or three character string staring
          * with ESCape.
+         * 
+         * @param reader {@link StringReader}
+         *           A string reader which provides the inputs
+         * @param prerenderer {@link Prerenderer}
+         *           A token prerenderer
          */
         function parseEscapeSequence(reader, prerenderer) {
             var c = reader.peak();
@@ -1147,18 +1216,18 @@ define(function(require, exports, module) {
                 return;
             }
 
-            $stack.push(Char(c));
+            $stack.push(charof(c));
 
             esc:
             switch (reader.read()) {
             case 0x20: /* SPACE */
                 switch (c = reader.read()) {
                 case 0x46:
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
                     dumpToken('S7C1T', prerenderer);
                     break esc;
                 case 0x47:
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
                     dumpToken('S8C1T', prerenderer);
                     break esc;
                 }
@@ -1174,7 +1243,7 @@ define(function(require, exports, module) {
             case 0x23: /* # */
                 switch (c = reader.read()) {
                 case 0x38: /* 8 */
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
                     dumpToken('DECALN', prerenderer);
                     break esc;
                 }
@@ -1183,7 +1252,7 @@ define(function(require, exports, module) {
                 break;
             case 0x24: /* $ */
                 c = reader.read();
-                $stack.push(Char(c));
+                $stack.push(charof(c));
 
                 switch (c) {
                 case 0x28: /* ( */
@@ -1215,7 +1284,7 @@ define(function(require, exports, module) {
             case 0x25: /* % */
                 switch (c = reader.read()) {
                 case 0x2F: /* / */
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
                     break;
                 default:
                     reader.unread();
@@ -1440,18 +1509,23 @@ define(function(require, exports, module) {
 
         /**
          * Parse CSI sequence
+         * 
+         * @param reader {@link StringReader}
+         *           A string reader which provides the inputs
+         * @param prerenderer {@link Prerenderer}
+         *           A token prerenderer
          */
         function parseCSISequence(reader, prerenderer) {
             var c = reader.read();
 
-            $stack.push(Char(c));
+            $stack.push(charof(c));
 
             csi:
             switch (c) {
             case 0x27: /* ' */
                 if (0x7B == reader.peak()) {
                     c = reader.read();
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
                     dumpToken('DECSLE', prerenderer);
                 }
                 break;
@@ -1467,13 +1541,13 @@ define(function(require, exports, module) {
             case 0x39: /* 9 */
                 do {
                     c = reader.read();
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
                 } while (isDigit(c));
 
                 switch (c) {
                 case 0x24: /* $ */
                     c = reader.read();
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
 
                     switch (c) {
                     case 0x7D: /* } */
@@ -1490,7 +1564,7 @@ define(function(require, exports, module) {
                 case 0x27: /* ' */
                     if (0x7B == reader.peak()) {
                         c = creader.read();
-                        $stack.push(Char(c));
+                        $stack.push(charof(c));
                         break csi;
                     }
                     break;
@@ -1502,7 +1576,7 @@ define(function(require, exports, module) {
                             break; 
                         }
 
-                        $stack.push(Char(c));
+                        $stack.push(charof(c));
                     }
 
                     reader.unread();
@@ -1519,7 +1593,7 @@ define(function(require, exports, module) {
                     }
 
                     c = reader.read();
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
                     groups = matches[1].split(';');
 
                     switch (c) {
@@ -1543,7 +1617,7 @@ define(function(require, exports, module) {
                         break;
                     case 0x27: /* ' */
                         c = reader.read();
-                        $stack.push(Char(c));
+                        $stack.push(charof(c));
 
                         switch (c) {
                         case 0x24: /* $ */
@@ -1714,7 +1788,7 @@ define(function(require, exports, module) {
                 break;
             case 0x3C: /* < */
                 c = reader.read();
-                $stack.push(Char(c));
+                $stack.push(charof(c));
 
                 switch (c) {
                 case 0x30: /* 0 */
@@ -1722,7 +1796,7 @@ define(function(require, exports, module) {
                     switch (reader.peak()) {
                     case 0x74: /* t */
                         c = reader.read();
-                        $stack.push(Char(c));
+                        $stack.push(charof(c));
                         dumpToken('TTIMEST', prerenderer);
                         break csi;
                     }
@@ -1739,14 +1813,14 @@ define(function(require, exports, module) {
                 break csi;
             case 0x3D: /* = */
                 c = reader.read();
-                $stack.push(Char(c));
+                $stack.push(charof(c));
 
                 switch (c) {
                 case 0x30:
                     switch (reader.peak()) {
                     case 0x63: /* c */
                         c = reader.read();
-                        $stack.push(Char(c));
+                        $stack.push(charof(c));
                         dumpToken('DA3', prerenderer);
                         break csi;
                     }
@@ -1757,7 +1831,7 @@ define(function(require, exports, module) {
                 break csi;
             case 0x3E: /* > */
                 c = reader.read();
-                $stack.push(Char(c));
+                $stack.push(charof(c));
 
                 switch (c) {
                 case 0x63: /* c */
@@ -1793,7 +1867,7 @@ define(function(require, exports, module) {
                             }
 
                             c = reader.read(); // the semicolons behind number
-                            $stack.push(Char(c));
+                            $stack.push(charof(c));
 
                             $stack.pop();
                             reader.unread();
@@ -1802,14 +1876,14 @@ define(function(require, exports, module) {
                             break;
                         case 0x35: /* 5 */
                             c = reader.read(); // the semicolons behind number
-                            $stack.push(Char(c));
+                            $stack.push(charof(c));
                             c = reader.read();
-                            $stack.push(Char(c));
+                            $stack.push(charof(c));
 
                             // CSI > 5 ; Ps K
                             if (isDigit(c) && 0x4B == reader.peak()) {
                                 c = reader.read();
-                                $stack.push(Char(c));
+                                $stack.push(charof(c));
                                 dumpToken('UNDEFINED', prerenderer);
                                 break csi;
                             }
@@ -1823,7 +1897,7 @@ define(function(require, exports, module) {
                         break;
                     case 0x63: /* c */
                         c = reader.read();
-                        $stack.push(Char(c));
+                        $stack.push(charof(c));
                         dumpToken('DA2', prerenderer);
                         break csi;
                     }
@@ -1836,7 +1910,7 @@ define(function(require, exports, module) {
             case 0x3F: /* ? */
                 do {
                     c = reader.read();
-                    $stack.push(Char(c));
+                    $stack.push(charof(c));
                 } while (isDigit(c) || 0x3B == c);
 
                 switch (c) {
@@ -1895,6 +1969,11 @@ define(function(require, exports, module) {
 
         /**
          * Parse operating system command sequence
+         * 
+         * @param reader {@link StringReader}
+         *           A string reader which provides the inputs
+         * @param prerenderer {@link Prerenderer}
+         *           A token prerenderer
          */
         function parseOSCSequence(reader, prerenderer) {
             var c = 0;
@@ -1908,7 +1987,7 @@ define(function(require, exports, module) {
                     break loop;
                 }
 
-                $stack.push(Char(c));
+                $stack.push(charof(c));
             }
 
             dumpToken('OSC', prerenderer);
@@ -1938,31 +2017,6 @@ define(function(require, exports, module) {
         }
 
     };
-
-    /**
-     * ANSI token prerenderer
-     * 
-     * @param renderer {@link Function}
-     *           Customized renderer
-     */
-    var Prerenderer = function(renderer) {
-        var $renderer = renderer || function(token) {
-            console.log(JSON.stringify(token));
-        };
-
-        this.prerender = function(token) {
-            switch (token.type) {
-            case 'ED':
-                token.value = token.image.replace(/\u001b](\d+)J/, '$1');
-                break;
-            case 'OSC':
-                token.title = token.image.replace(/\u001b]0;/, '');
-                break;
-            }
-
-            $renderer && $renderer(token);
-        };
-    }
 
     module.exports = ANSIParser;
 

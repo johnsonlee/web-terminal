@@ -2,7 +2,6 @@ define(function(require, exports, module) {
 
     var Graphics = require('www/graphics');
     var AnsiParser = require('www/ansi');
-    var StringBuffer = require('www/stringbuffer');
 
     var font = {
         style  : 'normal',
@@ -115,6 +114,7 @@ define(function(require, exports, module) {
             '46' : function(event) {
             },
         };
+        var $contexts = {};
         var $renderers = {
             'BEL'  : function(token) {
                 console.log('\u0007');
@@ -153,13 +153,99 @@ define(function(require, exports, module) {
             'OSC'  : function(token) {
                 document.title = token.title;
             },
-            'TEXT' : function(token) {
-                var len = token.image.length;
-                var line = $terminal.childNodes[$row]
-                        || newLine.call(this);
-                var text = document.createTextNode(token.image);
+            'SGR'  : function(token) {
+                var ctx = $contexts[token.type];
 
-                line.appendChild(text);
+                if (!ctx) {
+                    ctx = [];
+                    $contexts['SGR'] = ctx;
+                }
+
+                if (token.values[0]) {
+                    ctx.push(token);
+                } else {
+                    ctx.pop();
+                }
+            },
+            'TEXT' : function(token) {
+                var styles = [];
+                var len = token.image.length;
+                var text = document.createTextNode(token.image);
+                var line = $terminal.childNodes[$row] || newLine.call(this);
+                var sgrctx = $contexts['SGR'];
+
+                if (sgrctx && sgrctx.length) {
+                    var sgr = sgrctx[sgrctx.length - 1];
+
+                    for (var i = 0; i < sgr.values.length; i++) {
+                        switch (sgr.values[i]) {
+                        case 1:
+                            styles.push('font-style:bold');
+                            break;
+                        case 4:
+                            styles.push('border-bottom:1px');
+                            break;
+                        case 30:
+                            styles.push('color:black');
+                            break;
+                        case 31:
+                            styles.push('color:red');
+                            break;
+                        case 32:
+                            styles.push('color:green');
+                            break;
+                        case 33:
+                            styles.push('color:yellow');
+                            break;
+                        case 34:
+                            styles.push('color:blue');
+                            break;
+                        case 35:
+                            styles.push('color:magenta');
+                            break;
+                        case 36:
+                            styles.push('color:cyan');
+                            break;
+                        case 37:
+                            styles.push('color:white');
+                            break;
+                        case 40:
+                            styles.push('background-color:black');
+                            break;
+                        case 41:
+                            styles.push('background-color:red');
+                            break;
+                        case 42:
+                            styles.push('background-color:green');
+                            break;
+                        case 43:
+                            styles.push('background-color:yellow');
+                            break;
+                        case 44:
+                            styles.push('background-color:blue');
+                            break;
+                        case 45:
+                            styles.push('background-color:magenta');
+                            break;
+                        case 46:
+                            styles.push('background-color:cyan');
+                            break;
+                        case 47:
+                            styles.push('background-color:white');
+                            break;
+                        }
+                    }
+                }
+
+                if (styles.length) {
+                    var span = document.createElement('SPAN');
+                    line.appendChild(span);
+                    span.appendChild(text);
+                    span.setAttribute('style', styles.join(';'));
+                } else {
+                    line.appendChild(text);
+                }
+
                 $col += len;
             },
         };
@@ -201,6 +287,7 @@ define(function(require, exports, module) {
 
             $connection = io.connect(url);
             $connection.on('output', function(data) {
+                $contexts = {};
                 console.log(JSON.stringify(data));
                 $parser.parse(data.message, function(token) {
                     console.log(JSON.stringify(token));
