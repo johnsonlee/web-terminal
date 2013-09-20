@@ -1,0 +1,28 @@
+Web Terminal
+============
+
+Web Terminal is a browser based terminal, it provides a native terminal-like user experience.
+It runs with NodeJs runtime  and easy to deploy, just follows these steps as below:
+
+
+1.Clone Project
+---------------
+git clone https://github.com/johnsonlee/web-terminal.git
+
+2.Install dependencies
+----------------------
+cd web-terminal
+npm install
+
+cd node_modules/pty.js
+node-gyp configure --release
+node-gyp build
+cd ../../
+
+3.Run
+-----
+node app.js
+
+4.Access Web Terminal by Browser
+--------------------------------
+Enter URL: http://localhost:3000/terminal
