@@ -923,128 +923,222 @@ define(function(require, exports, module) {
 
             switch (token.type) {
             case 'ICH':
-                matches = token.image.match(/(\d+)@/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)@/, 1);
                 break;
             case 'CUU':
-                matches = token.image.match(/(\d+)A/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)A/, 1);
                 break;
             case 'CUD':
-                matches = token.image.match(/(\d+)B/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)B/, 1);
                 break;
             case 'CUF':
-                matches = token.image.match(/(\d+)C/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)C/, 1);
                 break;
             case 'CUB':
-                matches = token.image.match(/(\d+)D/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)D/, 1);
                 break;
             case 'CNL':
-                matches = token.image.match(/(\d+)E/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)E/, 1);
                 break;
             case 'CPL':
-                matches = token.image.match(/(\d+)F/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)F/, 1);
                 break;
             case 'CHA':
-                matches = token.image.match(/(\d+)G/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)G/, 1);
                 break;
             case 'CUP':
-                matches = token.image.match(/(\d*);(\d*)H$/);
-
-                if (matches) {
-                    token.values = [
-                        parseInt(matches[1]),
-                        parseInt(matches[2])
-                    ];
-                } else {
-                    token.values = [1, 1];
-                }
+                prerenderMultipleParams(token, /\[([\d;]+)H$/, [1, 1]);
                 break;
             case 'CHT':
-                matches = token.image.match(/(\d+)I/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)I/, 1);
                 break;
             case 'ED':
-                matches = token.image.match(/(\d+)J$/);
-                token.value = matches ? parseInt(matches[1]) : 0;
+                prerenderSingularParam(token, /\[(\d+)J$/, 0);
                 break;
             case 'EL':
-                matches = token.image.match(/(\d+)K$/);
-                token.value = matches ? parseInt(matches[1]) : 0;
+                prerenderSingularParam(token, /\[(\d+)K$/, 0);
                 break;
             case 'IL':
-                matches = token.image.match(/(\d+)L$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)L$/, 1);
                 break;
             case 'DL':
-                matches = token.image.match(/(\d+)M$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)M$/, 1);
                 break;
             case 'DCH':
-                matches = token.image.match(/(\d+)P$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)P$/, 1);
                 break;
             case 'SU':
-                matches = token.image.match(/(\d+)S$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)S$/, 1);
                 break;
             case 'SD':
-                matches = token.image.match(/(\d+)T$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)T$/, 1);
                 break;
             case 'ECH':
-                matches = token.image.match(/(\d+)X$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)X$/, 1);
                 break;
             case 'CBT':
-                matches = token.image.match(/(\d+)Z$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)Z$/, 1);
                 break;
             case 'HPA':
-                matches = token.image.match(/(\d+)`$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)`$/, 1);
                 break;
             case 'HPR':
-                matches = token.image.match(/(\d+)a$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)a$/, 1);
                 break;
             case 'DA':
-                matches = token.image.match(/(\d+)c$/);
-                token.value = matches ? parseInt(matches[1]) : 0;
+                prerenderSingularParam(token, /\[(\d+)c$/, 0);
                 break;
             case 'VPA':
-                matches = token.image.match(/(\d+)d$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)d$/, 1);
                 break;
             case 'VPR':
-                matches = token.image.match(/(\d+)e$/);
-                token.value = matches ? parseInt(matches[1]) : 1;
+                prerenderSingularParam(token, /\[(\d+)e$/, 1);
+                break;
+            case 'HVP':
+                prerenderMultipleParams(token, /\[([\d;]+)f$/, [1, 1]);
+                break;
+            case 'TBC':
+                prerenderSingularParam(token, /\[(\d+)g$/, 0);
+                break;
+            case 'SM':
+                prerenderMultipleParams(token, /\[([\d;]+)h$/, [0]);
+                break;
+            case 'MC':
+                prerenderMultipleParams(token, /\[([\d;]+)i$/, [0]);
+                break;
+            case 'HPB':
+                prerenderSingularParam(token, /\[(\d+)j$/, 1);
+                break;
+            case 'VPB':
+                prerenderSingularParam(token, /\[(\d+)k$/, 1);
+                break;
+            case 'RM':
+                prerenderMultipleParams(token, /\[([\d;]+)l$/, [0]);
+                break;
+            case 'SGR':
+                prerenderMultipleParams(token, /\[([\d;]+)m$/, [0]);
+                break;
+            case 'DSR':
+                prerenderSingularParam(token, /\[(\d+)n$/, 0);
+                break;
+            case 'DECSTBM':
+                prerenderMultipleParams(token, /\[([\d;]+)r$/, [0, 0]);
+                break;
+            case 'DECSLRM':
+                prerenderMultipleParams(token, /\[([\d;]+)s$/, [0, 0]);
+                break;
+            case 'DECSLPP':
+                prerenderMultipleParams(token, /\[([\d;]+)t$/, [0, 0, 0]);
+                break;
+            case 'TTIMEST':
+                prerenderSingularParam(token, /\[<(\d+)t$/, 0);
+                break;
+            case 'DA3':
+                prerenderSingularParam(token, /\[=(\d+)c$/, 0);
+                break;
+            case 'DA2':
+                prerenderSingularParam(token, /\[>(\d+)c$/, 0);
+                break;
+            case 'DECSED':
+                prerenderSingularParam(token, /\[\?(\d+)J$/, 0);
+                break;
+            case 'DECSEL':
+                prerenderSingularParam(token, /\[\?(\d+)K$/, 0);
+                break;
+            case 'DECSET':
+                prerenderMultipleParams(token, /\[\?([\d;]+)h$/, [0]);
+                break;
+            case 'DECMC':
+                prerenderMultipleParams(token, /\[\?([\d;]+)i$/, [0]);
+                break;
+            case 'DECRST':
+                prerenderMultipleParams(token, /\[\?([\d;]+)l$/, [0]);
+                break;
+            case 'DECDSR':
+                prerenderSingularParam(token, /\[\?(\d+)n$/, 0);
+                break;
+            case 'DECSCUSR':
+                prerenderSingularParam(token, /\[(\d+) q$/, 0);
+                break;
+            case 'DECSCL':
+                prerenderMultipleParams(token, /\[([\d;]+)"p$/, [0, 0]);
+                break;
+            case 'DECSCA':
+                prerenderSingularParam(token, /\[(\d+)"q$/, 0);
+                break;
+            case 'DECRQM':
+                prerenderSingularParam(token, /\[\??(\d+)\$p$/, 0);
+                break;
+            case 'DECERA':
+                prerenderMultipleParams(token, /\[([\d;]+)\$z$/, [0, 0, 0, 0]);
+                break;
+            case 'DECSERA':
+                prerenderMultipleParams(token, /\[([\d;]+)\${$/, [0, 0, 0, 0]);
+                break;
+            case 'DECSASD':
+                prerenderSingularParam(token, /\[(\d+)\$}$/, 0);
+                break;
+            case 'DECSSDT':
+                prerenderSingularParam(token, /\[(\d+)\$~$/, 0);
+                break;
+            case 'DECEFR':
+                prerenderMultipleParams(token, /\[([\d;]+)'w$/, [0, 0, 0, 0]);
+                break;
+            case 'DECELR':
+                prerenderMultipleParams(token, /\[([\d;]+)'z$/, [0, 0]);
+                break;
+            case 'DECSLE':
+                prerenderMultipleParams(token, /\[([\d;]+)'{$/, [0]);
                 break;
             case 'OSC':
                 token.title = token.image.replace(/^\u001b\]\d+;/, '');
-                break;
-            case 'SGR':
-                matches = token.image.match(/^\u001b\[([^m]+)m$/);
-
-                if (matches) {
-                    token.values = [];
-                    matches = matches[1].split(';');
-
-                    for (var i = 0; i < matches.length; i++) {
-                        token.values[i] = parseInt(matches[i]);
-                    }
-                }
                 break;
             }
 
             $renderer(token);
         };
+
+        /**
+         * Prerender token with singular parameter
+         * 
+         * @param token {@link Object}
+         *           ANSI token
+         * @param pattern {@link RegExp}
+         *           The pattern of token image to match          
+         * @param defval {@link Number}
+         *           The default value of parameter
+         */
+        function prerenderSingularParam(token, pattern, defval) {
+            var matches = token.image.match(pattern);
+
+            token.value = matches ? parseInt(matches[1]) : 0;
+        }
+
+        /**
+         * Prerender token with multiple parameters
+         * 
+         * @param token {@link Object}
+         *           ANSI token
+         * @param pattern {@link RegExp}
+         *           The pattern of token image to match          
+         * @param defvals {@link Array}
+         *           The default value of parameters
+         */
+        function prerenderMultipleParams(token, pattern, defvals) {
+            var matches = token.image.match(pattern);
+
+            if (matches) {
+                token.values = [];
+
+                matches = matches[1].split(';');
+
+                for (var i = 0; i < matches.length; i++) {
+                    token.values[i] = parseInt(matches[i]);
+                }
+            } else {
+                token.values = defvals;
+            }
+        }
     };
 
     /**
@@ -1615,6 +1709,30 @@ define(function(require, exports, module) {
         }
 
         /**
+         * Parse device control string sequence
+         * 
+         * @param reader {@link StringReader}
+         *           A string reader which provides the inputs
+         * @param prerenderer {@link Prerenderer}
+         *           A token prerenderer
+         */
+        function parseDCSSequence(reader, prerenderer) {
+            // TODO
+        }
+
+        /**
+         * Parse start of string sequence
+         * 
+         * @param reader {@link StringReader}
+         *           A string reader which provides the inputs
+         * @param prerenderer {@link Prerenderer}
+         *           A token prerenderer
+         */
+        function parseSOSSequence(reader, prerenderer) {
+            // TODO
+        }
+
+        /**
          * Parse CSI sequence
          * 
          * @param reader {@link StringReader}
@@ -1630,11 +1748,18 @@ define(function(require, exports, module) {
             csi:
             switch (c) {
             case 0x27: /* ' */
-                if (0x7B == reader.peak()) {
-                    c = reader.read();
+                switch (c = reader.read()) {
+                case 0x7B: /* { */
                     $stack.push(charof(c));
                     dumpToken('DECSLE', prerenderer);
+                    break csi;
+                case 0x7C: /* | */
+                    $stack.push(charof(c));
+                    dumpToken('DECRQLP', prerenderer);
+                    break csi;
                 }
+
+                reader.unread();
                 break;
             case 0x30: /* 0 */
             case 0x31: /* 1 */
@@ -2099,6 +2224,30 @@ define(function(require, exports, module) {
             }
 
             dumpToken('OSC', prerenderer);
+        }
+
+        /**
+         * Parse privacy message sequence
+         * 
+         * @param reader {@link StringReader}
+         *           A string reader which provides the inputs
+         * @param prerenderer {@link Prerenderer}
+         *           A token prerenderer
+         */
+        function parsePMSequence(reader, prerenderer) {
+            // TODO
+        }
+
+        /**
+         * Parse application program command sequence
+         * 
+         * @param reader {@link StringReader}
+         *           A string reader which provides the inputs
+         * @param prerenderer {@link Prerenderer}
+         *           A token prerenderer
+         */
+        function parseAPCSequence(reader, prerenderer) {
+            // TODO
         }
 
         /**
