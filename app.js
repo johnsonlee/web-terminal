@@ -52,6 +52,7 @@ socketManager.sockets.on('connection', function(socket) {
     });
 
     socket.on('resize', function(data) {
+        bash.resize(data.cols, data.rows);
         console.log('resize terminal: ' + data.cols + 'x' + data.rows);
     });
 

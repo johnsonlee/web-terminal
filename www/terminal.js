@@ -1,13 +1,9 @@
 define(function(require, exports, module) {
 
-    var Graphics = require('www/graphics');
+    var Paint = require('www/paint');
+    var Matrix = require('www/matrix');
+    var Canvas = require('www/canvas');
     var AnsiParser = require('www/ansi');
-
-    var font = {
-        style  : 'normal',
-        size   : '12pt',
-        family : 'Courier, Courier New',
-    };
 
     var COLORS = [
         'black',
@@ -25,14 +21,14 @@ define(function(require, exports, module) {
      */
     var WebTerminal = function() {
         var $this = this;
-        var $col = 0;
-        var $row = 0;
-        var $cols = 0;
-        var $rows = 0;
+        var $col = 1;
+        var $row = 1;
+        var $paint = new Paint();
         var $parser = new AnsiParser();
         var $cursor = document.createElement('DIV');
         var $terminal = document.createElement('DIV');
         var $container = document.createElement('DIV');
+        var $canvas = new Canvas($terminal);
         var $connection = null;
         var $handlers = {
             /**
@@ -61,7 +57,9 @@ define(function(require, exports, module) {
             /**
              * ESC
              */
-            '23' : function(event) {
+            '27' : function(event) {
+                $connection.emit('send', { message : String.fromCharCode(27) });
+                return false;
             },
 
             /**
@@ -117,139 +115,78 @@ define(function(require, exports, module) {
         var $contexts = {};
         var $renderers = {
             'BEL'  : function(token) {
-                console.log('\u0007');
+                // console.log('\u0007');
             },
-            'ED'   : function() {
-                while ($terminal.firstChild) {
-                    $terminal.removeChild($terminal.firstChild);
+            'BS'   : function(token) {
+                moveCursorTo.call(this, $row, $col - 1);
+            },
+            'CUU'  : function(token) {
+                moveCursorTo.call(this, $row - token.value, $col);
+            },
+            'CUD'  : function(token) {
+                moveCursorTo.call(this, $row + token.value, $col);
+            },
+            'CUF'  : function(token) {
+                moveCursorTo.call(this, $row, $col + token.value);
+            },
+            'CUB'  : function(token) {
+                moveCursorTo.call(this, $row, $col - token.value);
+            },
+            'CNL'  : function(token) {
+                moveCursorTo.call(this, $row + token.value, 1);
+            },
+            'CPL'  : function(token) {
+                moveCursorTo.call(this, $row - token.value, 1);
+            },
+            'CHA'  : function(token) {
+                moveCursorTo.call(this, $row, token.value);
+            },
+            'CUP'  : function(token) {
+                moveCursorTo.call(this, token.values[0], token.values[1]);
+            },
+            'ED'   : function(token) {
+                switch (token.value) {
+                case 0:
+                    break;
+                case 1:
+                    break;
+                case 2:
+                    $row = 1;
+                    $col = 1;
+                    $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
+                    break;
                 }
-
-                $row = 0;
-                $col = 0;
             },
             'LF'   : function() {
-                $col = 0;
-
-                if (++$row > $rows) {
-                    newLine.call(this);
-                }
-
+                moveCursorTo.call(this, $row + 1, 1);
                 updateUI.call(this);
             },
             'CR'   : function(token) {
-                $col = 0;
+                moveCursorTo.call(this, $row, 1);
                 updateUI.call(this);
             },
             'EL'   : function(token) {
-                var line = $terminal.childNodes[$row];
-
-                if (line.lastChild) {
-                    line.removeChild(line.lastChild);
+                switch (token.value) {
+                case 0:
+                    $canvas.clearRegion($col - 1, $row - 1, $canvas.width, $row);
+                    break;
+                case 1:
+                    $canvas.clearRegion(0, $row - 1, $col - 1, $row);
+                    break;
+                case 2:
+                    $canvas.clearRegion(0, $row - 1, $canvas.width, $row);
+                    break;
                 }
-
-                $col--;
                 updateUI.call(this);
             },
             'OSC'  : function(token) {
-                document.title = token.title;
+                this.title = token.image;
             },
             'SGR'  : function(token) {
-                var ctx = $contexts[token.type];
-
-                if (!ctx) {
-                    ctx = [];
-                    $contexts['SGR'] = ctx;
-                }
-
-                if (token.values && token.values[0]) {
-                    ctx.push(token);
-                } else {
-                    ctx.pop();
-                }
             },
             'TEXT' : function(token) {
-                var styles = [];
-                var len = token.image.length;
-                var text = document.createTextNode(token.image);
-                var line = $terminal.childNodes[$row] || newLine.call(this);
-                var sgrctx = $contexts['SGR'];
-
-                if (sgrctx && sgrctx.length) {
-                    var sgr = sgrctx[sgrctx.length - 1];
-
-                    for (var i = 0; i < sgr.values.length; i++) {
-                        if (!sgr.values)
-                            continue;
-
-                        switch (sgr.values[i]) {
-                        case 1:
-                            styles.push('font-style:bold');
-                            break;
-                        case 4:
-                            styles.push('border-bottom:1px');
-                            break;
-                        case 30:
-                            styles.push('color:black');
-                            break;
-                        case 31:
-                            styles.push('color:red');
-                            break;
-                        case 32:
-                            styles.push('color:green');
-                            break;
-                        case 33:
-                            styles.push('color:yellow');
-                            break;
-                        case 34:
-                            styles.push('color:blue');
-                            break;
-                        case 35:
-                            styles.push('color:magenta');
-                            break;
-                        case 36:
-                            styles.push('color:cyan');
-                            break;
-                        case 37:
-                            styles.push('color:white');
-                            break;
-                        case 40:
-                            styles.push('background-color:black');
-                            break;
-                        case 41:
-                            styles.push('background-color:red');
-                            break;
-                        case 42:
-                            styles.push('background-color:green');
-                            break;
-                        case 43:
-                            styles.push('background-color:yellow');
-                            break;
-                        case 44:
-                            styles.push('background-color:blue');
-                            break;
-                        case 45:
-                            styles.push('background-color:magenta');
-                            break;
-                        case 46:
-                            styles.push('background-color:cyan');
-                            break;
-                        case 47:
-                            styles.push('background-color:white');
-                            break;
-                        }
-                    }
-                }
-
-                if (styles.length) {
-                    var span = document.createElement('SPAN');
-                    line.appendChild(span);
-                    span.appendChild(text);
-                    span.setAttribute('style', styles.join(';'));
-                } else {
-                    line.appendChild(text);
-                }
-
-                $col += len;
+                $canvas.drawText(token.image, $col - 1, $row - 1);
+                $col += token.image.length;
             },
         };
 
@@ -265,15 +202,12 @@ define(function(require, exports, module) {
             },
         });
 
-        Object.defineProperty(this, 'rows', {
+        Object.defineProperty(this, 'title', {
             get : function() {
-                return $rows;
-            }
-        });
-
-        Object.defineProperty(this, 'columns', {
-            get : function() {
-                return $cols;
+                return document.title;
+            },
+            set : function(title) {
+                document.title = title;
             }
         });
 
@@ -290,12 +224,11 @@ define(function(require, exports, module) {
 
             $connection = io.connect(url);
             $connection.on('output', function(data) {
-                $contexts = {};
                 console.log(JSON.stringify(data));
                 $parser.parse(data.message, function(token) {
-                    console.log(JSON.stringify(token));
                     var renderer = $renderers[token.type];
 
+                    console.log(JSON.stringify(token));
                     renderer && renderer(token);
                 });
                 updateUI.call($this);
@@ -327,9 +260,7 @@ define(function(require, exports, module) {
             $container.appendChild($cursor);
             $container.appendChild($terminal);
             container.appendChild($container);
-
             $terminal.focus();
-
             resize.call(this);
 
             window.setInterval(function() {
@@ -346,7 +277,7 @@ define(function(require, exports, module) {
         };
 
         function resize() {
-            var fm = Graphics['2d'].getFontMetrics(font);
+            var fm = $paint.measureText(' ');
 
             $container.style.width = $container.offsetParent.clientWidth;
             $container.style.height = $container.offsetParent.clientHeight;
@@ -356,43 +287,42 @@ define(function(require, exports, module) {
             $terminal.style.width = this.width + 'px';
             $terminal.style.height = this.height + 'px';
 
-            $cols = Math.floor(this.width / fm.width);
-            $rows = Math.floor(this.height / fm.height);
+            $canvas.resize(
+                Math.floor(this.width / fm.width),
+                Math.floor(this.height / fm.height)
+            );
+            $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
 
             $connection.emit('resize', {
-                cols : $cols,
-                rows : $rows,
+                cols : $canvas.width,
+                rows : $canvas.height,
             });
 
             updateUI.call(this);
         };
 
-        function newLine() {
-            var line = document.createElement('DIV');
-
-            $terminal.appendChild(line);
-            $terminal.scrollByLines(1);
-
-            return line;
+        function moveCursorTo(row, column) {
+            $row = row;
+            $col = column;
+            updateCursor.call(this);
         }
 
         function updateCursor() {
-            var fm = Graphics['2d'].getFontMetrics(font);
+            var fm = $paint.measureText(' ');
 
-            $cursor.style.top = ($row * fm.height - $terminal.scrollTop) + 'px';
-            $cursor.style.left = ($col * fm.width) + 'px';
+            $cursor.style.top = (($row - 1) * fm.height - $terminal.scrollTop) + 'px';
+            $cursor.style.left = (($col - 1) * fm.width) + 'px';
         }
 
         function updateUI() {
             var n = $terminal.childNodes.length;
 
-            $rows = Math.max($rows, $row);
             updateCursor.call(this);
         }
 
-        window.onresize = function() {
+        /*window.onresize = function() {
             resize.call($this);
-        };
+        };*/
     };
 
     module.exports = WebTerminal;

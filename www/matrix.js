@@ -9,9 +9,9 @@ define(function(require, exports, module) {
      *           The height of matrix
      */
     var Matrix = function(width, height) {
-        var $width = width;
-        var $height = height;
-        var $data = new Array($width * $height);
+        var $data = [];
+        var $width = width || 0;
+        var $height = height || 0;
 
         /**
          * Matrix width
@@ -21,6 +21,15 @@ define(function(require, exports, module) {
         Object.defineProperty(this, 'width', {
             get : function() {
                 return $width;
+            },
+            set : function(width) {
+                if (this.width > width) {
+                    for (var y = 0; y < this.height; y++) {
+                        $data[y].splice(width, this.width - width);
+                    }
+                }
+
+                $width = width;
             }
         });
 
@@ -32,6 +41,23 @@ define(function(require, exports, module) {
         Object.defineProperty(this, 'height', {
             get : function() {
                 return $height;
+            },
+            set : function(height) {
+                if (this.height < height) {
+                    for (var i = this.height; i < height; i++) {
+                       $data.push([]); 
+                    }
+                } else if (this.height > height) {
+                    $data.splice(height, this.height - height);
+                }
+
+                $height = height;
+            }
+        });
+
+        Object.defineProperty(this, 'data', {
+            get : function() {
+                return $data;
             }
         });
 
@@ -45,7 +71,7 @@ define(function(require, exports, module) {
          * @return the object which locate at (x, y)
          */
         this.get = function(x, y) {
-            return $data[$height * y + x];
+            return $data[y][x];
         };
 
         /**
@@ -57,7 +83,7 @@ define(function(require, exports, module) {
          *           The y coordinate, it's in the range [0, height)
          */
         this.set = function(x, y, data) {
-            $data[$height * y + x] = data;
+            $data[y][x] = data;
         };
 
     };
