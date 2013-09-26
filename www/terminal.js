@@ -105,45 +105,31 @@ define(function(require, exports, module) {
             },
             'SGR'  : function(token) {
                 for (var i = 0; i < token.values.length; i++) {
+                    var attr = null;
                     var value = token.values[i];
 
                     switch (value) {
                     case 0:
                         $paint.reset();
+                        $paint['font-weight'] = 'normal';
+                        $paint['reverse-video'] = false;
                         break;
                     case 1:
                         $paint['font-weight'] = 'bold';
                         break;
                     case 7:
-                        var fgcolor = $paint['color'];
-                        var bgcolor = $paint['background-color'];
-
-                        $paint['color'] = bgcolor;
-                        $paint['background-color'] = fgcolor;
+                        $paint['reverse-video'] = true;
                         break;
                     case 30:
-                        $paint['color'] = THEMES[$theme].black;
-                        break;
                     case 31:
-                        $paint['color'] = THEMES[$theme].red;
-                        break;
                     case 32:
-                        $paint['color'] = THEMES[$theme].green;
-                        break;
                     case 33:
-                        $paint['color'] = THEMES[$theme].yellow;
-                        break;
                     case 34:
-                        $paint['color'] = THEMES[$theme].blue;
-                        break;
                     case 35:
-                        $paint['color'] = THEMES[$theme].magenta;
-                        break;
                     case 36:
-                        $paint['color'] = THEMES[$theme].cyan;
-                        break;
                     case 37:
-                        $paint['color'] = THEMES[$theme].white;
+                        attr = $paint['reverse-video'] ? 'background-color' : 'color';
+                        $paint[attr] = THEMES[$theme][Object.keys(THEMES[$theme])[value - 30]];
                         break;
                     case 38:
                         break;
@@ -151,28 +137,15 @@ define(function(require, exports, module) {
                         $paint.reset('color');
                         break;
                     case 40:
-                        $paint['background-color'] = THEMES[$theme].black;
-                        break;
                     case 41:
-                        $paint['background-color'] = THEMES[$theme].red;
-                        break;
                     case 42:
-                        $paint['background-color'] = THEMES[$theme].green;
-                        break;
                     case 43:
-                        $paint['background-color'] = THEMES[$theme].yellow;
-                        break;
                     case 44:
-                        $paint['background-color'] = THEMES[$theme].blue;
-                        break;
                     case 45:
-                        $paint['background-color'] = THEMES[$theme].magenta;
-                        break;
                     case 46:
-                        $paint['background-color'] = THEMES[$theme].cyan;
-                        break;
                     case 47:
-                        $paint['background-color'] = THEMES[$theme].white;
+                        attr = $paint['reverse-video'] ? 'color' : 'background-color';
+                        $paint[attr] = THEMES[$theme][Object.keys(THEMES[$theme])[value - 40]];
                         break;
                     case 48:
                         break;
@@ -220,6 +193,8 @@ define(function(require, exports, module) {
         this.start = function(url, container) {
             var $this = this;
 
+            $paint['color'] = THEMES[$theme].white;
+
             $connection = io.connect(url);
             $connection.on('output', function(data) {
                 console.log(JSON.stringify(data));
@@ -241,22 +216,127 @@ define(function(require, exports, module) {
                 switch (event.keyCode) {
                 case VirtualKey.VK_BACK:
                     $connection.emit('send', { message : '\b' });
-                    return false;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
                 case VirtualKey.VK_TAB:
                     $connection.emit('send', { message : '\t' });
-                    return false;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
                 case VirtualKey.VK_RETURN:
                     $connection.emit('send', { message : '\n' });
-                    return false;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
                 case VirtualKey.VK_ESCAPE:
-                    $connection.emit('send', { message : '\u001b' });
-                    return false;
+                    $connection.emit('send', { message : '\x1b' });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
                 case VirtualKey.VK_LEFT:
                 case VirtualKey.VK_UP:
                 case VirtualKey.VK_RIGHT:
                 case VirtualKey.VK_DOWN:
-                    $connection.emit('send', { message : String.fromCharCode(event.keyCode) });
-                    return false;
+                    // TODO
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F1:
+                    $connection.emit('send', {
+                        message : '\x1bOP',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F2:
+                    $connection.emit('send', {
+                        message : '\x1bOQ',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F3:
+                    $connection.emit('send', {
+                        message : '\x1bOR',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F4:
+                    $connection.emit('send', {
+                        message : '\x1bOS',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F5:
+                    $connection.emit('send', {
+                        message : '\x1b[15~',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F6:
+                    $connection.emit('send', {
+                        message : '\x1b[17~',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F7:
+                    $connection.emit('send', {
+                        message : '\x1b[18~',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F8:
+                    $connection.emit('send', {
+                        message : '\x1b[19~',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F9:
+                    $connection.emit('send', {
+                        message : '\x1b[20~',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F10:
+                    $connection.emit('send', {
+                        message : '\x1b[21~',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F11:
+                    $connection.emit('send', {
+                        message : '\x1b[23~',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_F12:
+                    $connection.emit('send', {
+                        message : '\x1b[24~',
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                default:
+                    if (0x40 <= event.keyCode && event.keyCode <= 0x5F) {
+                        if (event.ctrlKey) {
+                            $connection.emit('send', {
+                                message : String.fromCharCode(event.keyCode - 0x40),
+                            });
+                            event.preventDefault();
+                            event.stopPropagation();
+                            break;
+                        }
+                    }
                 }
             };
 
