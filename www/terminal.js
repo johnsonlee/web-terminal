@@ -4,17 +4,20 @@ define(function(require, exports, module) {
     var Matrix = require('www/matrix');
     var Canvas = require('www/canvas');
     var AnsiParser = require('www/ansi');
+    var VirtualKey = require('www/vkcode');
 
-    var COLORS = [
-        'black',
-        'red',
-        'green',
-        'yello',
-        'blue',
-        'magenta',
-        'cyan',
-        'white',
-    ]
+    var THEMES = {
+        tango : {
+            black   : ['#000000', '#555753'],
+            red     : ['#cc0000', '#ef2929'],
+            green   : ['#4e9a06', '#8ae234'],
+            yellow  : ['#c4a000', '#fce94f'],
+            blue    : ['#3465a4', '#729fcf'],
+            magenta : ['#75507b', '#ad7fa8'],
+            cyan    : ['#06989a', '#34e2e2'],
+            white   : ['#d3d7cf', '#ffffff'],
+        }
+    }
 
     /**
      * Web Terminal
@@ -23,6 +26,7 @@ define(function(require, exports, module) {
         var $this = this;
         var $col = 1;
         var $row = 1;
+        var $theme = 'tango';
         var $paint = new Paint();
         var $parser = new AnsiParser();
         var $cursor = document.createElement('DIV');
@@ -30,89 +34,6 @@ define(function(require, exports, module) {
         var $container = document.createElement('DIV');
         var $canvas = new Canvas($terminal);
         var $connection = null;
-        var $handlers = {
-            /**
-             * BACKSPACE
-             */
-            '8'  : function(event) {
-                $connection.emit('send', { message : '\b' });
-                return false;
-            },
-
-            '9'  : function(event) {
-                $connection.emit('send', { message : '\t' });
-                return false;
-            },
-
-            /**
-             * ENTER
-             */
-            '13' : function(event) {
-                $connection.emit('send', { message : '\r' });
-                updateUI.call(this);
-                $terminal.scrollByLines(1);
-                return false;
-            },
-
-            /**
-             * ESC
-             */
-            '27' : function(event) {
-                $connection.emit('send', { message : String.fromCharCode(27) });
-                return false;
-            },
-
-            /**
-             * SPACE
-             */
-            '32' : function(event) {
-                $connection.emit('send', { message : ' ' });
-                return false;
-            },
-
-            /**
-             * END
-             */
-            '35' : function(event) {
-            },
-
-            /**
-             * HOME
-             */
-            '36' : function(event) {
-            },
-
-            /**
-             * LEFT
-             */
-            '37' : function(event) {
-            },
-
-            /**
-             * UP
-             */
-            '38' : function(event) {
-            },
-
-            /**
-             * RIGHT
-             */
-            '39' : function(event) {
-            },
-
-            /**
-             * DOWN
-             */
-            '40' : function(event) {
-            },
-
-            /**
-             * DELETE
-             */
-            '46' : function(event) {
-            },
-        };
-        var $contexts = {};
         var $renderers = {
             'BEL'  : function(token) {
                 // console.log('\u0007');
@@ -180,12 +101,89 @@ define(function(require, exports, module) {
                 updateUI.call(this);
             },
             'OSC'  : function(token) {
-                this.title = token.image;
+                this.title = token.title;
             },
             'SGR'  : function(token) {
+                for (var i = 0; i < token.values.length; i++) {
+                    var value = token.values[i];
+
+                    switch (value) {
+                    case 0:
+                        $paint.reset();
+                        break;
+                    case 1:
+                        $paint['font-weight'] = 'bold';
+                        break;
+                    case 7:
+                        var fgcolor = $paint['color'];
+                        var bgcolor = $paint['background-color'];
+
+                        $paint['color'] = bgcolor;
+                        $paint['background-color'] = fgcolor;
+                        break;
+                    case 30:
+                        $paint['color'] = THEMES[$theme].black;
+                        break;
+                    case 31:
+                        $paint['color'] = THEMES[$theme].red;
+                        break;
+                    case 32:
+                        $paint['color'] = THEMES[$theme].green;
+                        break;
+                    case 33:
+                        $paint['color'] = THEMES[$theme].yellow;
+                        break;
+                    case 34:
+                        $paint['color'] = THEMES[$theme].blue;
+                        break;
+                    case 35:
+                        $paint['color'] = THEMES[$theme].magenta;
+                        break;
+                    case 36:
+                        $paint['color'] = THEMES[$theme].cyan;
+                        break;
+                    case 37:
+                        $paint['color'] = THEMES[$theme].white;
+                        break;
+                    case 38:
+                        break;
+                    case 39:
+                        $paint.reset('color');
+                        break;
+                    case 40:
+                        $paint['background-color'] = THEMES[$theme].black;
+                        break;
+                    case 41:
+                        $paint['background-color'] = THEMES[$theme].red;
+                        break;
+                    case 42:
+                        $paint['background-color'] = THEMES[$theme].green;
+                        break;
+                    case 43:
+                        $paint['background-color'] = THEMES[$theme].yellow;
+                        break;
+                    case 44:
+                        $paint['background-color'] = THEMES[$theme].blue;
+                        break;
+                    case 45:
+                        $paint['background-color'] = THEMES[$theme].magenta;
+                        break;
+                    case 46:
+                        $paint['background-color'] = THEMES[$theme].cyan;
+                        break;
+                    case 47:
+                        $paint['background-color'] = THEMES[$theme].white;
+                        break;
+                    case 48:
+                        break;
+                    case 49:
+                        $paint.reset('background-color');
+                        break;
+                    }
+                }
             },
             'TEXT' : function(token) {
-                $canvas.drawText(token.image, $col - 1, $row - 1);
+                $canvas.drawText(token.image, $col - 1, $row - 1, $paint.isDefault() ? null : $paint);
                 $col += token.image.length;
             },
         };
@@ -229,7 +227,7 @@ define(function(require, exports, module) {
                     var renderer = $renderers[token.type];
 
                     console.log(JSON.stringify(token));
-                    renderer && renderer(token);
+                    renderer && renderer.call($this, token);
                 });
                 updateUI.call($this);
             });
@@ -240,10 +238,25 @@ define(function(require, exports, module) {
             $container.setAttribute('class', 'terminal-container');
 
             $terminal.onkeydown = function(event) {
-                var handler = $handlers[event.keyCode];
-
-                if ('function' === typeof handler) {
-                    return handler.call($this, event);
+                switch (event.keyCode) {
+                case VirtualKey.VK_BACK:
+                    $connection.emit('send', { message : '\b' });
+                    return false;
+                case VirtualKey.VK_TAB:
+                    $connection.emit('send', { message : '\t' });
+                    return false;
+                case VirtualKey.VK_RETURN:
+                    $connection.emit('send', { message : '\n' });
+                    return false;
+                case VirtualKey.VK_ESCAPE:
+                    $connection.emit('send', { message : '\u001b' });
+                    return false;
+                case VirtualKey.VK_LEFT:
+                case VirtualKey.VK_UP:
+                case VirtualKey.VK_RIGHT:
+                case VirtualKey.VK_DOWN:
+                    $connection.emit('send', { message : String.fromCharCode(event.keyCode) });
+                    return false;
                 }
             };
 
@@ -318,6 +331,10 @@ define(function(require, exports, module) {
             var n = $terminal.childNodes.length;
 
             updateCursor.call(this);
+        }
+
+        function isFunctionKey(keyCode) {
+            return (keyCode >= 0x70 && keyCode <= 0x7B);
         }
 
         /*window.onresize = function() {
