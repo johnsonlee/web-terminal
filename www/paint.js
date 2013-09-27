@@ -1,95 +1,123 @@
 define(function(require, exports, module) {
 
-    var DEFAULT_STYLES = {
-        'color'            : null,
-        'background-color' : null,
-        'font-size'        : '11pt',
-        'font-family'      : 'Courier, Courier New',
-        'font-weight'      : 'normal',
-    };
+    var Paint = function(style) {
+        var $style = {
+            'reverse-video' : {
+                'default' : false,
+            },
+            'color' : {
+                'default' : [ 'white', 'white' ],
+            },
+            'background-color' : {
+                'default' : [ 'black', 'black' ],
+            },
+            'font-size' : {
+                'default' : '11pt',
+            },
+            'font-family' : {
+                'default' : 'Courier, Courier New',
+            },
+            'font-weight' : {
+                'default' : 'normal',
+            },
+        };
 
-    var Paint = function() {
-        var $fgColor;
-        var $bgColor;
-        var $fontSize;
-        var $fontFamily;
-        var $fontWeight;
+        for (var i in $style) {
+            if ('undefined' !== style[i]) {
+                $style[i].value = style[i];
+            }
+        }
+
+        Object.defineProperty(this, 'reverse-video', {
+            get : function() {
+                return $style['reverse-video'].value || $style['reverse-video']['default'];
+            },
+            set : function(value) {
+                $style['reverse-video'].value = value;
+            }
+        });
 
         Object.defineProperty(this, 'background-color', {
             get : function() {
-                return $bgColor ? $bgColor['bold' == $fontWeight ? 1 : 0] : null;
+                return $style['background-color'].value || $style['background-color']['default'];
             },
             set : function(color) {
-                $bgColor = color;
+                $style['background-color'].value = color;
             }
         });
 
         Object.defineProperty(this, 'color', {
             get : function() {
-                return $fgColor ? $fgColor['bold' == $fontWeight ? 1 : 0] : null;
+                return $style['color'].value || $style['color']['default'];
             },
             set : function(color) {
-                $fgColor = color;
+                $style['color'].value = color;
             }
         });
 
         Object.defineProperty(this, 'font-size', {
             get : function() {
-                return $fontSize;
+                return $style['font-size'].value || $style['font-size']['default'];
             },
             set : function(size) {
-                $fontSize = size;
+                $style['font-size'].value = size;
             }
         });
 
         Object.defineProperty(this, 'font-weight', {
             get : function() {
-                return $fontWeight;
+                return $style['font-weight'].value || $style['font-weight']['default'];
             },
             set : function(weight) {
-                $fontWeight = weight;
+                $style['font-weight'].value = weight;
             }
         });
 
         Object.defineProperty(this, 'font-family', {
             get : function() {
-                return $fontFamily;
+                return $style['font-family'].value || $style['font-family']['default'];
             },
             set : function(family) {
-                $fontFamily = family;
+                $style['font-family'].value = family;
             }
         });
 
+        /**
+         * Test whether the specified style of this paint is default 
+         * 
+         * @param style {@link String}
+         *           Style name
+         */
+        this.isDefault = function(style) {
+            if ('undefined' !== typeof style) {
+                return $style[style].value == $style[style]['default'];
+            } else {
+                for (var i in $style) {
+                    if ($style[i].value != $style[i]['default'])
+                        return false;
+                }
+
+                return true;
+            }
+        };
+
+        /**
+         * Reset the specified style, if style name not specified, restore all styles
+         * 
+         * @param style {@link String}
+         *           Style name
+         */
+        this.reset = function(style) {
+            if ('undefined' !== typeof style && 'undefined' !== typeof $style[style]) {
+                $style[style].value = $style[style]['default'];
+            } else {
+                for (var i in $style) {
+                    $style[i].value = $style[i]['default'];
+                }
+            }
+        };
+
         this.reset();
-    };
-
-    /**
-     * Test whether all parameters of this paint is default 
-     */
-    Paint.prototype.isDefault = function() {
-        for (var style in DEFAULT_STYLES) {
-            if (this[style] != DEFAULT_STYLES[style]) {
-                return false;
-            }
-        }
-
-        return true;
-    };
-
-    /**
-     * Reset the specified style, if style name not specified, restore all styles
-     * 
-     * @param style {@link String}
-     *           Style name
-     */
-    Paint.prototype.reset = function(style) {
-        if ('undefined' !== typeof DEFAULT_STYLES[style]) {
-            this[style] = DEFAULT_STYLES[style];
-        } else {
-            for (style in DEFAULT_STYLES) {
-                this[style] = DEFAULT_STYLES[style];
-            }
-        }
     };
 
     /**
@@ -105,12 +133,14 @@ define(function(require, exports, module) {
         var span = document.createElement('SPAN');
 
         span.innerText = text;
-        span.setAttribute('style', this.toString());
         span.style.top = '-1000px';
         span.style.left = '-1000px';
         span.style.zIndex = -1;
         span.style.position = 'absolute';
         span.style.whiteSpace = 'pre';
+        span.style.fontSize = this['font-size'];
+        span.style.fontWeight = this['font-weight'];
+        span.style.fontFamily = this['font-family'];
 
         document.body.appendChild(span);
 
@@ -124,10 +154,22 @@ define(function(require, exports, module) {
 
     Paint.prototype.toString = function() {
         var styles = [];
+        var bold = 'bold' == this['font-weight'];
 
-        for (var style in DEFAULT_STYLES) {
-            if (this[style]) {
-                styles.push(style + ':' + this[style]);
+        if (this['font-weight']) {
+            styles.push('font-weight:' + this['font-weight']);
+        }
+
+        if (this['reverse-video']) {
+            styles.push('color:' + this['background-color'][bold ? 1 : 0]);
+            styles.push('background-color:' + this['color'][bold ? 1 : 0]);
+        } else {
+            if (!this.isDefault('color')) {
+                styles.push('color:' + this['color'][bold ? 1 : 0]);
+            }
+
+            if (!this.isDefault('background-color')) {
+                styles.push('background-color:' + this['background-color'][bold ? 1 : 0]);
             }
         }
 

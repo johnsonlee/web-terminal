@@ -1159,7 +1159,7 @@ define(function(require, exports, module) {
         this.parse = function(input, renderer) {
             var c = 0;
             var tokens = new Array();
-            var reader = new StringReader(input);
+            var reader = new StringReader($stack.dump() + input);
             var prerenderer = new Prerenderer(renderer);
 
             try {
@@ -1183,7 +1183,7 @@ define(function(require, exports, module) {
                 if ('EOF' != e.message)
                     throw e;
 
-                if (!$stack.empty) {
+                if (!$stack.empty && !$stack.contains('\x1b')) {
                     dumpToken('TEXT', prerenderer);
                 }
             }
@@ -2177,24 +2177,27 @@ define(function(require, exports, module) {
             case 0x4B: /* K */
                 dumpToken('EL', prerenderer);
                 break csi;
+            case 0x4C: /* L */
+                dumpToken('IL', prerenderer);
+                break csi;
             case 0x68: /* h */
                 dumpToken('SM', prerenderer);
-                break;
+                break csi;
             case 0x69: /* i */
                 dumpToken('MC', prerenderer);
-                break;
+                break csi;
             case 0x6C: /* l */
                 dumpToken('RM', prerenderer);
-                break;
+                break csi;
             case 0x6D: /* m */
                 dumpToken('SGR', prerenderer);
-                break;
+                break csi;
             case 0x73: /* s */
                 dumpToken('SCP', prerenderer);
-                break;
+                break csi;
             case 0x75: /* u */
                 dumpToken('RCP', prerenderer);
-                break;
+                break csi;
             default:
                 break;
             }

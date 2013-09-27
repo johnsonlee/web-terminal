@@ -19,6 +19,15 @@ define(function(require, exports, module) {
         }
     }
 
+    var DEFAULT_PAINT = {
+        'reverse-video'    : false,
+        'color'            : THEMES.tango.white,
+        'background-color' : THEMES.tango.black,
+        'font-size'        : '11pt',
+        'font-family'      : 'Courier, Courier New',
+        'font-weight'      : 'normal',
+    };
+
     /**
      * Web Terminal
      */
@@ -27,7 +36,7 @@ define(function(require, exports, module) {
         var $col = 1;
         var $row = 1;
         var $theme = 'tango';
-        var $paint = new Paint();
+        var $paint = new Paint(DEFAULT_PAINT);
         var $parser = new AnsiParser();
         var $cursor = document.createElement('DIV');
         var $terminal = document.createElement('DIV');
@@ -86,6 +95,9 @@ define(function(require, exports, module) {
                 moveCursorTo.call(this, $row, 1);
                 updateUI.call(this);
             },
+            'IL'   : function(token) {
+                $canvas.insertLine($row - 1, token.value);
+            },
             'EL'   : function(token) {
                 switch (token.value) {
                 case 0:
@@ -111,8 +123,6 @@ define(function(require, exports, module) {
                     switch (value) {
                     case 0:
                         $paint.reset();
-                        $paint['font-weight'] = 'normal';
-                        $paint['reverse-video'] = false;
                         break;
                     case 1:
                         $paint['font-weight'] = 'bold';
@@ -128,8 +138,7 @@ define(function(require, exports, module) {
                     case 35:
                     case 36:
                     case 37:
-                        attr = $paint['reverse-video'] ? 'background-color' : 'color';
-                        $paint[attr] = THEMES[$theme][Object.keys(THEMES[$theme])[value - 30]];
+                        $paint['color'] = THEMES[$theme][Object.keys(THEMES[$theme])[value - 30]];
                         break;
                     case 38:
                         break;
@@ -144,8 +153,7 @@ define(function(require, exports, module) {
                     case 45:
                     case 46:
                     case 47:
-                        attr = $paint['reverse-video'] ? 'color' : 'background-color';
-                        $paint[attr] = THEMES[$theme][Object.keys(THEMES[$theme])[value - 40]];
+                        $paint['background-color'] = THEMES[$theme][Object.keys(THEMES[$theme])[value - 40]];
                         break;
                     case 48:
                         break;
@@ -158,6 +166,17 @@ define(function(require, exports, module) {
             'TEXT' : function(token) {
                 $canvas.drawText(token.image, $col - 1, $row - 1, $paint.isDefault() ? null : $paint);
                 $col += token.image.length;
+            },
+            'DECSTBM' : function(token) {
+                moveCursorTo.call(this, 1, 1);
+                $canvas.setVerticalMargin(token.values[0], token.values[1]);
+            },
+            'DECSLRM' : function(token) {
+                moveCursorTo.call(this, 1, 1);
+                $canvas.setHorizontalMargin(token.values[0], token.values[1]);
+            },
+            'DECLRMM' : function(token) {
+                // TODO
             },
         };
 
@@ -192,8 +211,6 @@ define(function(require, exports, module) {
          */
         this.start = function(url, container) {
             var $this = this;
-
-            $paint['color'] = THEMES[$theme].white;
 
             $connection = io.connect(url);
             $connection.on('output', function(data) {
@@ -234,11 +251,23 @@ define(function(require, exports, module) {
                     event.preventDefault();
                     event.stopPropagation();
                     break;
-                case VirtualKey.VK_LEFT:
                 case VirtualKey.VK_UP:
-                case VirtualKey.VK_RIGHT:
+                    $connection.emit('send', { message : '\x1bOA' });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
                 case VirtualKey.VK_DOWN:
-                    // TODO
+                    $connection.emit('send', { message : '\x1bOB' });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_RIGHT:
+                    $connection.emit('send', { message : '\x1bOC' });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    break;
+                case VirtualKey.VK_LEFT:
+                    $connection.emit('send', { message : '\x1bOD' });
                     event.preventDefault();
                     event.stopPropagation();
                     break;
@@ -337,6 +366,7 @@ define(function(require, exports, module) {
                             break;
                         }
                     }
+                    break;
                 }
             };
 
@@ -346,8 +376,19 @@ define(function(require, exports, module) {
                 });
             };
 
+            $terminal.onmousewheel = function(event) {
+                var fm = $paint.measureText(' ');
+                var lines = Math.floor(event.wheelDelta / fm.height);
+
+                if (Math.abs(lines) > 0) {
+                    $connection.emit('send', {
+                        message : '\x1b[' + Math.abs(lines) + (lines > 0 ? 'T' : 'S'),
+                    });
+                }
+            };
+
             $terminal.onscroll = function(event) {
-                updateCursor.call(this);
+                // updateCursor.call(this);
             };
 
             $container.appendChild($cursor);

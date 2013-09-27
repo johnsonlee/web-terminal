@@ -38,6 +38,15 @@ define(function(require, exports, module) {
             return s;
         };
 
+        this.contains = function(o) {
+            for (var i = 0; i < $stack.length; i++) {
+                if ($stack[i] == o)
+                    return true;
+            }
+
+            return false;
+        };
+
         this.toString = function() {
             return $stack.join('');
         };

@@ -211,6 +211,18 @@ define(function(require, exports, module) {
         }
     };
 
+    Canvas.prototype.setVerticalMargin = function(top, bottom) {
+        // TODO
+    };
+
+    Canvas.prototype.setHorizontalMargin = function(left, right) {
+        // TODO
+    };
+
+    Canvas.prototype.insertLine = function(y, n) {
+        // TODO
+    };
+
     Canvas.prototype.toString = function() {
         var buffer = [];
 
