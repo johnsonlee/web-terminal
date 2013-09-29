@@ -100,10 +100,8 @@ define(function(require, exports, module) {
                 $holder.appendChild(line);
             }
 
-            if (this.marginBottom < height) {
-                for (var i = 0; i < height - this.marginBottom; i++) {
-                }
-            }
+            this.marginTop = 1;
+            this.marginBottom = this.height;
         };
     };
 
@@ -244,28 +242,123 @@ define(function(require, exports, module) {
         }
     };
 
-    Canvas.prototype.insertLine = function(y, n) {
-        var row = [];
-        var entry = this.matrix.get(0, y);
-        var line = document.createElement('DIV');
-        var text = document.createTextNode('');
+    /**
+     * Scroll up canvas
+     * 
+     * @param y {@link Number}
+     *           The row number of cursor position
+     * @param n {@link Number}
+     *           The number of rows to scroll up
+     */
+    Canvas.prototype.scrollUp = function(y, n) {
+        var width = this.width;
+        var delta = this.height - this.marginBottom;
 
-        line.appendChild(text);
+        for (var i = 0; i < delta; i++) {
+            var row = [];
+            var text = document.createTextNode('');
+            var entry = this.matrix.data.splice(this.marginTop - 1, 1)[0][0];
+            var line = entry.dom.parentNode;
 
-        for (var i = 0; i < this.width; i++) {
-            text.appendData(' ');
-            row.push({
-                data : ' ',
-                dom : text,
-                left : i,
-                right : this.width - i - 1,
-            });
+            line.parentNode.removeChild(line);
+            line = document.createElement('DIV');
+            line.appendChild(text);
+
+            for (var j = 0; j < width; j++) {
+                text.appendData(' ');
+                row.push({
+                    data : ' ',
+                    dom : text,
+                    left : j,
+                    right : width - j - 1,
+                });
+            }
+
+            entry = this.matrix.get(0, this.marginBottom - 1);
+            this.matrix.data.splice(this.marginBottom - 1, 0, row);
+            this.holder.insertBefore(line, entry.dom.parentNode);
         }
-
-        this.matrix.data.splice(y, 0, row);
-        this.holder.insertBefore(line, entry.dom.parentNode);
     };
 
+    /**
+     * Scroll down canvas
+     * 
+     * @param y {@link Number}
+     *           The row number of cursor position
+     * @param n {@link Number}
+     *           The number of rows to scroll down
+     */
+    Canvas.prototype.scrollDown = function(y, n) {
+        var width = this.width;
+        var height = this.height;
+        var delta = this.height - this.marginBottom + this.marginTop;
+
+        for (var i = 0; i < n; i++) {
+            var row = [];;
+            var entry = this.matrix.get(0, this.marginTop - 1);
+            var text = document.createTextNode('');
+            var line = document.createElement('DIV');
+
+            for (var j = 0; j < width; j++) {
+                text.appendData(' ');
+                row.push({
+                    data : ' ',
+                    dom : text,
+                    left : j,
+                    right : width - j - 1,
+                });
+            }
+
+            line.appendChild(text);
+            this.matrix.data.splice(this.marginTop - 1, 0, row);
+            this.holder.insertBefore(line, entry.dom.parentNode);
+        }
+
+        for (var i = 0; i < n; i++) {
+            var row = this.matrix.data.splice(this.marginBottom, 1);
+            var line = row[0][0].dom.parentNode;
+
+            this.holder.removeChild(line);
+        }
+    };
+
+    /**
+     * Insert n lines at the specified position
+     * 
+     * @param y {@link Number}
+     *           The position start to insert
+     * @param n {@link Number}
+     *           The number of lines to insert
+     */
+    Canvas.prototype.insertLine = function(y, n) {
+        var width = this.width;
+        var entry = this.matrix.get(0, y);
+
+        for (var j = 0; j < n; j++) {
+            var row = [];
+            var line = document.createElement('DIV');
+            var text = document.createTextNode('');
+
+            line.appendChild(text);
+
+            for (var i = 0; i < width; i++) {
+                text.appendData(' ');
+                row.push({
+                    data : ' ',
+                    dom : text,
+                    left : i,
+                    right : width - i - 1,
+                });
+            }
+
+            this.matrix.data.splice(y, 0, row);
+            this.holder.insertBefore(line, entry.dom.parentNode);
+        }
+    };
+
+    /**
+     * Append one line in this canvas
+     */
     Canvas.prototype.appendLine = function() {
         var row = [];
         var height = this.height;
@@ -286,13 +379,6 @@ define(function(require, exports, module) {
 
         this.matrix.data.push(row);
         this.holder.appendChild(line);
-
-        if (this.height > this.marginBottom) {
-            var row = this.matrix.data.shift();
-            var line = row[0].dom.parentNode;
-
-            line.parentNode.removeChild(line);
-        }
     };
 
     Canvas.prototype.toString = function() {

@@ -1111,7 +1111,7 @@ define(function(require, exports, module) {
         function prerenderSingularParam(token, pattern, defval) {
             var matches = token.image.match(pattern);
 
-            token.value = matches ? parseInt(matches[1]) : 0;
+            token.value = matches ? parseInt(matches[1]) : defval;
         }
 
         /**

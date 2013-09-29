@@ -87,20 +87,43 @@ define(function(require, exports, module) {
                     break;
                 }
             },
+            /*
+             * Move cursor to first position on next line.
+             * If cursor is at bottom margin, then screen
+             * performs a scroll-up.
+             */
             'LF'   : function() {
-                if ($row + 1 > $canvas.height) {
-                    $canvas.appendLine();
-                }
-
                 moveCursorTo.call(this, $row + 1, 1);
-                updateUI.call(this);
+
+                if ($row >= $canvas.marginBottom) {
+                    $canvas.scrollUp($row - 1, 1);
+                }
             },
             'CR'   : function(token) {
                 moveCursorTo.call(this, $row, 1);
-                updateUI.call(this);
             },
+            /*
+             * Inserts on or more blank lines, starting at
+             * the cursor.
+             * 
+             * As lines are inserted, lines below the
+             * cursor and in the scrolling region move
+             * down. Lines scrolled off the page are lost.
+             */
             'IL'   : function(token) {
-                $canvas.insertLine($row - 1, token.value);
+                $canvas.scrollDown($row, token.value);
+            },
+            /*
+             * Moves the cursor up one line in the same
+             * column. If the cursor is at the top margin,
+             * the page scrolls down.
+             */
+            'RI'   : function(token) {
+                if ($row == $canvas.marginTop) {
+                    $canvas.scrollDown($row, 1);
+                }
+
+                moveCursorTo.call(this, Math.max(1, $row - 1), $col);
             },
             'EL'   : function(token) {
                 switch (token.value) {
@@ -223,7 +246,12 @@ define(function(require, exports, module) {
                     var renderer = $renderers[token.type];
 
                     console.log(JSON.stringify(token));
-                    renderer && renderer.call($this, token);
+
+                    try {
+                        renderer && renderer.call($this, token);
+                    } catch (e) {
+                        console.error(e.stack);
+                    }
                 });
                 updateUI.call($this);
             });
