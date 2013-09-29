@@ -322,6 +322,12 @@ define(function(require, exports, module) {
         }
     };
 
+    Canvas.prototype.scrollOut = function(height) {
+        while (this.height > height) {
+            this.matrix.data.shift();
+        }
+    };
+
     /**
      * Insert n lines at the specified position
      * 

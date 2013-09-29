@@ -93,9 +93,17 @@ define(function(require, exports, module) {
              * performs a scroll-up.
              */
             'LF'   : function() {
-                moveCursorTo.call(this, $row + 1, 1);
+                var height = $canvas.height;
 
-                if ($row >= $canvas.marginBottom) {
+                if ($row + 1 > $canvas.height) {
+                    $canvas.appendLine();
+                    $canvas.scrollOut(height);
+                    $terminal.scrollTop = $terminal.scrollHeight;
+                }
+
+                moveCursorTo.call(this, Math.min($row + 1, height), 1);
+
+                if ($row > $canvas.marginBottom) {
                     $canvas.scrollUp($row - 1, 1);
                 }
             },
@@ -470,11 +478,6 @@ define(function(require, exports, module) {
         function moveCursorTo(row, column) {
             $row = row;
             $col = column;
-
-            if ($row >= this.height) {
-                $terminal.scrollTop = $terminal.scrollHeight;
-            }
-
             updateCursor.call(this);
         }
 
