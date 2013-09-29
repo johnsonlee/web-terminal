@@ -11,7 +11,17 @@ define(function(require, exports, module) {
     var Matrix = function(width, height) {
         var $data = [];
         var $width = width || 0;
-        var $height = height || 0;
+
+        // initialize matrix
+        for (var y = 0; y < height; y++) {
+            var row = [];
+
+            for (var x = 0; x < width; x++) {
+                row.push(null);
+            }
+
+            $data.push(row);
+        }
 
         /**
          * Matrix width
@@ -40,7 +50,7 @@ define(function(require, exports, module) {
          */
         Object.defineProperty(this, 'height', {
             get : function() {
-                return $height;
+                return $data.length;
             },
             set : function(height) {
                 if (this.height < height) {
@@ -50,8 +60,6 @@ define(function(require, exports, module) {
                 } else if (this.height > height) {
                     $data.splice(height, this.height - height);
                 }
-
-                $height = height;
             }
         });
 
@@ -86,6 +94,35 @@ define(function(require, exports, module) {
             $data[y][x] = data;
         };
 
+    };
+
+    /*
+     * Get the sub matrix of this matrix with specified boundary
+     * 
+     * @param x {@link Number}
+     *           The x coordinate
+     * @param y {@link Number}
+     *           The y coordinate, it's in the range [0, height)
+     * @param width {@link Number}
+     *           The width of sub matrix
+     * @param width {@link Number}
+     *           The heigh of sub matrix
+     * @return the a sub matrix of this matrix
+     */
+    Matrix.prototype.subMatrix = function(x, y, width, height) {
+        var $width = x + width;
+        var $height = y + height;
+        var matrix = new Matrix(width, height);
+
+        for (var $y = y; $y < $height; $y++) {
+            for (var $x = x; $x < $width; $x++) {
+                var entry = this.get($x, $y);
+
+                matrix.set($x, $y, entry);
+            }
+        }
+
+        return matrix;
     };
 
     module.exports = Matrix;

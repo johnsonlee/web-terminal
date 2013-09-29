@@ -19,6 +19,18 @@ define(function(require, exports, module) {
         var $lines = [];
         var $holder = holder;
         var $matrix = new Matrix();
+        var $bounds = {
+            left : 0,
+            top  : 0,
+            right : 0,
+            bottom : 0,
+        };
+
+        Object.defineProperty(this, 'holder', {
+            get : function() {
+                return $holder;
+            }
+        });
 
         Object.defineProperty(this, 'width', {
             get : function() {
@@ -38,6 +50,24 @@ define(function(require, exports, module) {
             }
         });
 
+        Object.defineProperty(this, 'marginTop', {
+            get : function() {
+                return $bounds.top;
+            },
+            set : function(marginTop) {
+                $bounds.top = marginTop;
+            }
+        });
+
+        Object.defineProperty(this, 'marginBottom', {
+            get : function() {
+                return $bounds.bottom;
+            },
+            set : function(marginBottom) {
+                $bounds.bottom = marginBottom;
+            }
+        });
+
         /**
          * Resize canvas
          * 
@@ -47,29 +77,32 @@ define(function(require, exports, module) {
          *           New height to resize
          */
         this.resize = function(width, height) {
-            for (var i = this.height; i < height; i++) {
-                $lines[i] = document.createElement('DIV');
-                $holder.appendChild($lines[i]);
-            }
+            var $height = this.height;
 
             $matrix.width = width;
             $matrix.height = height;
 
-            for (var y = 0; y < this.height; y++) {
-                var line = $lines[y];
+            for (var y = $height; y < height; y++) {
+                var line = $lines[y] = document.createElement('DIV');
                 var text = document.createTextNode('');
 
-                for (var x = 0; x < this.width; x++) {
+                for (var x = 0; x < width; x++) {
                     text.appendData(' ');
                     $matrix.set(x, y, {
                         data : ' ',
                         dom  : text,
                         left : x,
-                        right : this.width - x - 1,
+                        right : width - x - 1,
                     });
                 }
 
                 line.appendChild(text);
+                $holder.appendChild(line);
+            }
+
+            if (this.marginBottom < height) {
+                for (var i = 0; i < height - this.marginBottom; i++) {
+                }
             }
         };
     };
@@ -211,16 +244,55 @@ define(function(require, exports, module) {
         }
     };
 
-    Canvas.prototype.setVerticalMargin = function(top, bottom) {
-        // TODO
-    };
-
-    Canvas.prototype.setHorizontalMargin = function(left, right) {
-        // TODO
-    };
-
     Canvas.prototype.insertLine = function(y, n) {
-        // TODO
+        var row = [];
+        var entry = this.matrix.get(0, y);
+        var line = document.createElement('DIV');
+        var text = document.createTextNode('');
+
+        line.appendChild(text);
+
+        for (var i = 0; i < this.width; i++) {
+            text.appendData(' ');
+            row.push({
+                data : ' ',
+                dom : text,
+                left : i,
+                right : this.width - i - 1,
+            });
+        }
+
+        this.matrix.data.splice(y, 0, row);
+        this.holder.insertBefore(line, entry.dom.parentNode);
+    };
+
+    Canvas.prototype.appendLine = function() {
+        var row = [];
+        var height = this.height;
+        var line = document.createElement('DIV');
+        var text = document.createTextNode('');
+
+        line.appendChild(text);
+
+        for (var i = 0; i < this.width; i++) {
+            text.appendData(' ');
+            row.push({
+                data : ' ',
+                dom : text,
+                left : i,
+                right : this.width - i - 1,
+            });
+        }
+
+        this.matrix.data.push(row);
+        this.holder.appendChild(line);
+
+        if (this.height > this.marginBottom) {
+            var row = this.matrix.data.shift();
+            var line = row[0].dom.parentNode;
+
+            line.parentNode.removeChild(line);
+        }
     };
 
     Canvas.prototype.toString = function() {

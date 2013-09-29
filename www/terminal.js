@@ -88,6 +88,10 @@ define(function(require, exports, module) {
                 }
             },
             'LF'   : function() {
+                if ($row + 1 > $canvas.height) {
+                    $canvas.appendLine();
+                }
+
                 moveCursorTo.call(this, $row + 1, 1);
                 updateUI.call(this);
             },
@@ -169,11 +173,11 @@ define(function(require, exports, module) {
             },
             'DECSTBM' : function(token) {
                 moveCursorTo.call(this, 1, 1);
-                $canvas.setVerticalMargin(token.values[0], token.values[1]);
+                $canvas.marginTop = token.values[0];
+                $canvas.marginBottom = token.values[1];
             },
             'DECSLRM' : function(token) {
                 moveCursorTo.call(this, 1, 1);
-                $canvas.setHorizontalMargin(token.values[0], token.values[1]);
             },
             'DECLRMM' : function(token) {
                 // TODO
@@ -388,7 +392,7 @@ define(function(require, exports, module) {
             };
 
             $terminal.onscroll = function(event) {
-                // updateCursor.call(this);
+                updateCursor.call(this);
             };
 
             $container.appendChild($cursor);
@@ -438,6 +442,11 @@ define(function(require, exports, module) {
         function moveCursorTo(row, column) {
             $row = row;
             $col = column;
+
+            if ($row >= this.height) {
+                $terminal.scrollTop = $terminal.scrollHeight;
+            }
+
             updateCursor.call(this);
         }
 
