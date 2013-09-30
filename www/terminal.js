@@ -471,22 +471,42 @@ define(function(require, exports, module) {
                     event.stopPropagation();
                     break;
                 case VirtualKey.VK_UP:
-                    $connection.emit('send', { message : '\x1bOA' });
+                    if (event.altKey) {
+                        $connection.emit('send', { message : '\x1b[1;3A' });
+                    } else {
+                        $connection.emit('send', { message : '\x1bOA' });
+                    }
+
                     event.preventDefault();
                     event.stopPropagation();
                     break;
                 case VirtualKey.VK_DOWN:
-                    $connection.emit('send', { message : '\x1bOB' });
+                    if (event.altKey) {
+                        $connection.emit('send', { message : '\x1b[1;3B' });
+                    } else {
+                        $connection.emit('send', { message : '\x1bOB' });
+                    }
+
                     event.preventDefault();
                     event.stopPropagation();
                     break;
                 case VirtualKey.VK_RIGHT:
-                    $connection.emit('send', { message : '\x1bOC' });
+                    if (event.altKey) {
+                        $connection.emit('send', { message : '\x1b[1;3C' });
+                    } else {
+                        $connection.emit('send', { message : '\x1bOC' });
+                    }
+
                     event.preventDefault();
                     event.stopPropagation();
                     break;
                 case VirtualKey.VK_LEFT:
-                    $connection.emit('send', { message : '\x1bOD' });
+                    if (event.altKey) {
+                        $connection.emit('send', { message : '\x1b[1;3D' });
+                    } else {
+                        $connection.emit('send', { message : '\x1bOD' });
+                    }
+
                     event.preventDefault();
                     event.stopPropagation();
                     break;
@@ -615,6 +635,14 @@ define(function(require, exports, module) {
             container.appendChild($container);
             $terminal.focus();
             resize.call(this);
+
+            window.onbeforeunload = function(event) {
+                if ($state.alternateMode) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return false;
+                }
+            };
 
             window.setInterval(function() {
                 var className = $cursor.getAttribute('class');

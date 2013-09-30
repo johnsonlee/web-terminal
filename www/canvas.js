@@ -288,9 +288,8 @@ define(function(require, exports, module) {
      */
     Canvas.prototype.scrollUp = function(y, n) {
         var width = this.width;
-        var delta = this.height - this.marginBottom;
 
-        for (var i = 0; i < delta; i++) {
+        for (var i = 0; i < n; i++) {
             var row = [];
             var text = document.createTextNode('');
             var entry = this.matrix.data.splice(this.marginTop - 1, 1)[0][0];
@@ -327,7 +326,6 @@ define(function(require, exports, module) {
     Canvas.prototype.scrollDown = function(y, n) {
         var width = this.width;
         var height = this.height;
-        var delta = this.height - this.marginBottom + this.marginTop;
 
         for (var i = 0; i < n; i++) {
             var row = [];;
