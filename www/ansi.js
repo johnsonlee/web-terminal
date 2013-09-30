@@ -947,7 +947,7 @@ define(function(require, exports, module) {
                 prerenderSingularParam(token, /\[(\d+)G/, 1);
                 break;
             case 'CUP':
-                prerenderMultipleParams(token, /\[([\d;]+)H$/, [1, 1]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)H$/, [1, 1]);
                 break;
             case 'CHT':
                 prerenderSingularParam(token, /\[(\d+)I/, 1);
@@ -995,16 +995,16 @@ define(function(require, exports, module) {
                 prerenderSingularParam(token, /\[(\d+)e$/, 1);
                 break;
             case 'HVP':
-                prerenderMultipleParams(token, /\[([\d;]+)f$/, [1, 1]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)f$/, [1, 1]);
                 break;
             case 'TBC':
                 prerenderSingularParam(token, /\[(\d+)g$/, 0);
                 break;
             case 'SM':
-                prerenderMultipleParams(token, /\[([\d;]+)h$/, [0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)h$/, [0]);
                 break;
             case 'MC':
-                prerenderMultipleParams(token, /\[([\d;]+)i$/, [0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)i$/, [0]);
                 break;
             case 'HPB':
                 prerenderSingularParam(token, /\[(\d+)j$/, 1);
@@ -1013,22 +1013,22 @@ define(function(require, exports, module) {
                 prerenderSingularParam(token, /\[(\d+)k$/, 1);
                 break;
             case 'RM':
-                prerenderMultipleParams(token, /\[([\d;]+)l$/, [0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)l$/, [0]);
                 break;
             case 'SGR':
-                prerenderMultipleParams(token, /\[([\d;]+)m$/, [0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)m$/, [0]);
                 break;
             case 'DSR':
                 prerenderSingularParam(token, /\[(\d+)n$/, 0);
                 break;
             case 'DECSTBM':
-                prerenderMultipleParams(token, /\[([\d;]+)r$/, [0, 0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)r$/, [0, 0]);
                 break;
             case 'DECSLRM':
-                prerenderMultipleParams(token, /\[([\d;]+)s$/, [0, 0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)s$/, [0, 0]);
                 break;
             case 'DECSLPP':
-                prerenderMultipleParams(token, /\[([\d;]+)t$/, [0, 0, 0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)t$/, [0, 0, 0]);
                 break;
             case 'TTIMEST':
                 prerenderSingularParam(token, /\[<(\d+)t$/, 0);
@@ -1046,13 +1046,13 @@ define(function(require, exports, module) {
                 prerenderSingularParam(token, /\[\?(\d+)K$/, 0);
                 break;
             case 'DECSET':
-                prerenderMultipleParams(token, /\[\?([\d;]+)h$/, [0]);
+                prerenderMultipleParams(token, /\[\?((\d+)?(;\d+)*)h$/, [0]);
                 break;
             case 'DECMC':
-                prerenderMultipleParams(token, /\[\?([\d;]+)i$/, [0]);
+                prerenderMultipleParams(token, /\[\?((\d+)?(;\d+)*)i$/, [0]);
                 break;
             case 'DECRST':
-                prerenderMultipleParams(token, /\[\?([\d;]+)l$/, [0]);
+                prerenderMultipleParams(token, /\[\?((\d+)?(;\d+)*)l$/, [0]);
                 break;
             case 'DECDSR':
                 prerenderSingularParam(token, /\[\?(\d+)n$/, 0);
@@ -1061,7 +1061,7 @@ define(function(require, exports, module) {
                 prerenderSingularParam(token, /\[(\d+) q$/, 0);
                 break;
             case 'DECSCL':
-                prerenderMultipleParams(token, /\[([\d;]+)"p$/, [0, 0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)"p$/, [0, 0]);
                 break;
             case 'DECSCA':
                 prerenderSingularParam(token, /\[(\d+)"q$/, 0);
@@ -1070,10 +1070,10 @@ define(function(require, exports, module) {
                 prerenderSingularParam(token, /\[\??(\d+)\$p$/, 0);
                 break;
             case 'DECERA':
-                prerenderMultipleParams(token, /\[([\d;]+)\$z$/, [0, 0, 0, 0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)\$z$/, [0, 0, 0, 0]);
                 break;
             case 'DECSERA':
-                prerenderMultipleParams(token, /\[([\d;]+)\${$/, [0, 0, 0, 0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)\${$/, [0, 0, 0, 0]);
                 break;
             case 'DECSASD':
                 prerenderSingularParam(token, /\[(\d+)\$}$/, 0);
@@ -1082,13 +1082,13 @@ define(function(require, exports, module) {
                 prerenderSingularParam(token, /\[(\d+)\$~$/, 0);
                 break;
             case 'DECEFR':
-                prerenderMultipleParams(token, /\[([\d;]+)'w$/, [0, 0, 0, 0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)'w$/, [0, 0, 0, 0]);
                 break;
             case 'DECELR':
-                prerenderMultipleParams(token, /\[([\d;]+)'z$/, [0, 0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)'z$/, [0, 0]);
                 break;
             case 'DECSLE':
-                prerenderMultipleParams(token, /\[([\d;]+)'{$/, [0]);
+                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)'{$/, [0]);
                 break;
             case 'OSC':
                 token.title = token.image.replace(/^\u001b\]\d+;/, '');
@@ -1133,7 +1133,7 @@ define(function(require, exports, module) {
                 matches = matches[1].split(';');
 
                 for (var i = 0; i < matches.length; i++) {
-                    token.values[i] = parseInt(matches[i]);
+                    token.values[i] = parseInt(matches[i]) || defvals[i] || defvals[0];
                 }
             } else {
                 token.values = defvals;
@@ -2168,6 +2168,9 @@ define(function(require, exports, module) {
                 }
 
                 break;
+            case 0x43: /* C */
+                dumpToken('CUF', prerenderer);
+                break csi;
             case 0x48: /* H */
                 dumpToken('CUP', prerenderer);
                 break csi;

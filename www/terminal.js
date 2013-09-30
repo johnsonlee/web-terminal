@@ -35,6 +35,7 @@ define(function(require, exports, module) {
         var $this = this;
         var $col = 1;
         var $row = 1;
+        var $state = {};
         var $theme = 'tango';
         var $paint = new Paint(DEFAULT_PAINT);
         var $parser = new AnsiParser();
@@ -44,12 +45,133 @@ define(function(require, exports, module) {
         var $canvas = new Canvas($terminal);
         var $connection = null;
         var $renderers = {
+            /*
+             * Sounds the bell tone
+             */
             'BEL'  : function(token) {
                 // console.log('\u0007');
             },
+
+            /*
+             * Moves the cursor one character position to the left
+             */
             'BS'   : function(token) {
                 moveCursorTo.call(this, $row, $col - 1);
             },
+
+            /*
+             * Save the following items:
+             * - Cursor position
+             * - Character attributes (SGR)
+             * - GL and GR state
+             * - Wrap flag
+             * - Origin mode state
+             * - Selective erase attribute (DECSCA)
+             * - Any single SS2 or SS3 functions sent
+             */
+            'DECSC' : function(token) {
+                $state.col = $col;
+                $state.row = $row;
+                $state.paint = $paint;
+                $state.scrollTop = $terminal.scrollTop;
+                $col = $row = 1;
+                $paint = new Paint(DEFAULT_PAINT);
+            },
+
+            /*
+             * Restores the terminal to the state saved by
+             * the save cursor (DECSC) function.
+             */
+            'DECRC' : function(token) {
+                $col = $state.col;
+                $row = $state.row;
+                $paint = $state.paint;
+                $terminal.scrollTop = $state.scrollTop;
+            },
+
+            /*
+             * Sets DEC/xterm specific modes.
+             */
+            'DECSET' : function(token) {
+                for (var i = 0; i < token.values.length; i++) {
+                    var value = token.values[i];
+
+                    switch (value) {
+                    case 1:  // Application cursor keys
+                        $state.cursorKeyMode = WebTerminal.APPLICATION_CURSOR_KEY_MODE;
+                        break;
+                    case 6:  // Enable origin mode
+                        $state.originMode = true;
+                        break;
+                    case 47: // Swith to alternate screen buffer
+                        $state.alternateMode = true;
+                        $state.canvas = $canvas;
+                        $state.norscrn = [];
+
+                        while ($terminal.lastChild) {
+                            var line = $terminal.removeChild($terminal.lastChild);
+                            $state.norscrn.push(line);
+                        }
+
+                        $canvas = new Canvas($terminal);
+                        $canvas.resize($state.canvas.width, $state.canvas.height);
+                        $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
+                        break;
+                    case 1000: // Enable normal mouse tracking
+                        $state.mouseTrackable = true;
+                        break;
+                    }
+                }
+            },
+
+            /*
+             * Resets DEC/xterm specific modes.
+             */
+            'DECRST' : function(token) {
+                for (var i = 0; i < token.values.length; i++) {
+                    var value = token.values[i];
+
+                    switch (value) {
+                    case 1:  // Normal cursor key
+                        $state.cursorKeyMode = WebTerminal.NORMAL_CURSOR_KEY_MODE;
+                        break;
+                    case 6:  // Disable origin mode
+                        $state.originMode = false;
+                        break;
+                    case 47: // Swith to normal screen buffer
+                        $state.alternateMode = false;
+
+                        while ($terminal.lastChild) {
+                            $terminal.removeChild($terminal.lastChild);
+                        }
+
+                        while ($state.norscrn.length > 0) {
+                            $terminal.appendChild($state.norscrn.pop());
+                        }
+
+                        $canvas = $state.canvas;
+                        break;
+                    case 1000: // Disable mouse tracking
+                        $state.mouseTrackable = false;
+                        break;
+                    }
+                }
+            },
+
+            /*
+             * Using application keypad mode
+             */
+            'DECKPAM' : function(token) {
+                $state.keypadMode = WebTerminal.APPLICATION_KEYPAD_MODE;
+            },
+
+            /*
+             * Using normal keypad mode
+             */
+            'DECKPNM' : function(token) {
+                $state.keypadMode = WebTerminal.NORMAL_KEYPAD_MODE;
+            },
+
             'CUU'  : function(token) {
                 moveCursorTo.call(this, $row - token.value, $col);
             },
@@ -74,6 +196,10 @@ define(function(require, exports, module) {
             'CUP'  : function(token) {
                 moveCursorTo.call(this, token.values[0], token.values[1]);
             },
+
+            /*
+             * Erase display
+             */
             'ED'   : function(token) {
                 switch (token.value) {
                 case 0:
@@ -81,12 +207,19 @@ define(function(require, exports, module) {
                 case 1:
                     break;
                 case 2:
-                    $row = 1;
-                    $col = 1;
-                    $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
+                    if ($state.alternateMode) {
+                        $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
+                        $row = 1;
+                        $col = 1;
+                    } else {
+                        $canvas.clear();
+                        $row = 1;
+                        $col = 1;
+                    }
                     break;
                 }
             },
+
             /*
              * Move cursor to first position on next line.
              * If cursor is at bottom margin, then screen
@@ -107,9 +240,11 @@ define(function(require, exports, module) {
                     $canvas.scrollUp($row - 1, 1);
                 }
             },
-            'CR'   : function(token) {
+
+            'CR' : function(token) {
                 moveCursorTo.call(this, $row, 1);
             },
+
             /*
              * Inserts on or more blank lines, starting at
              * the cursor.
@@ -118,22 +253,35 @@ define(function(require, exports, module) {
              * cursor and in the scrolling region move
              * down. Lines scrolled off the page are lost.
              */
-            'IL'   : function(token) {
+            'IL' : function(token) {
                 $canvas.scrollDown($row, token.value);
             },
+
+            /*
+             * Delete specified number of characters from
+             * the cursor position to the right.
+             */
+            'DCH' : function(token) {
+                $canvas.clearRegion($col - 1, $row - 1, $col + token.value + 1, $row);
+            },
+
             /*
              * Moves the cursor up one line in the same
              * column. If the cursor is at the top margin,
              * the page scrolls down.
              */
-            'RI'   : function(token) {
+            'RI' : function(token) {
                 if ($row == $canvas.marginTop) {
                     $canvas.scrollDown($row, 1);
                 }
 
                 moveCursorTo.call(this, Math.max(1, $row - 1), $col);
             },
-            'EL'   : function(token) {
+
+            /*
+             * Erase in line
+             */
+            'EL' : function(token) {
                 switch (token.value) {
                 case 0:
                     $canvas.clearRegion($col - 1, $row - 1, $canvas.width, $row);
@@ -147,12 +295,19 @@ define(function(require, exports, module) {
                 }
                 updateUI.call(this);
             },
+
+            /*
+             * Operating system command
+             */
             'OSC'  : function(token) {
                 this.title = token.title;
             },
+
+            /*
+             * Select graphics rendition
+             */
             'SGR'  : function(token) {
                 for (var i = 0; i < token.values.length; i++) {
-                    var attr = null;
                     var value = token.values[i];
 
                     switch (value) {
@@ -198,18 +353,31 @@ define(function(require, exports, module) {
                     }
                 }
             },
+
             'TEXT' : function(token) {
                 $canvas.drawText(token.image, $col - 1, $row - 1, $paint.isDefault() ? null : $paint);
                 $col += token.image.length;
             },
+
+            /*
+             * Set top and bottom margin
+             */
             'DECSTBM' : function(token) {
                 moveCursorTo.call(this, 1, 1);
                 $canvas.marginTop = token.values[0];
                 $canvas.marginBottom = token.values[1];
             },
+
+            /*
+             * Set left and right margin. It's used for screen scrolling
+             */
             'DECSLRM' : function(token) {
                 moveCursorTo.call(this, 1, 1);
             },
+
+            /*
+             * Set left and right margin mode
+             */
             'DECLRMM' : function(token) {
                 // TODO
             },
@@ -381,13 +549,13 @@ define(function(require, exports, module) {
                     event.preventDefault();
                     event.stopPropagation();
                     break;
-                case VirtualKey.VK_F11:
+                /*case VirtualKey.VK_F11:
                     $connection.emit('send', {
                         message : '\x1b[23~',
                     });
                     event.preventDefault();
                     event.stopPropagation();
-                    break;
+                    break;*/
                 case VirtualKey.VK_F12:
                     $connection.emit('send', {
                         message : '\x1b[24~',
@@ -456,10 +624,13 @@ define(function(require, exports, module) {
             $container.style.width = $container.offsetParent.clientWidth;
             $container.style.height = $container.offsetParent.clientHeight;
 
+            var cols = Math.floor(this.width / fm.width);
+            var rows = Math.floor(this.height / fm.height);
             $cursor.style.width = fm.width + 'px';
             $cursor.style.height = fm.height + 'px';
             $terminal.style.width = this.width + 'px';
-            $terminal.style.height = this.height + 'px';
+            $terminal.style.height = (fm.height * rows) + 'px';
+            $terminal.style.paddingBottom = (this.height - fm.height * rows) + 'px';
 
             $canvas.resize(
                 Math.floor(this.width / fm.width),
@@ -502,6 +673,11 @@ define(function(require, exports, module) {
             resize.call($this);
         };*/
     };
+
+    WebTerminal.NORMAL_KEYPAD_MODE = 0;
+    WebTerminal.APPLICATION_KEYPAD_MODE = 1;
+    WebTerminal.NORMAL_CURSOR_KEY_MODE = 0;
+    WebTerminal.APPLICATION_CURSOR_KEY_MODE = 1;
 
     module.exports = WebTerminal;
 });

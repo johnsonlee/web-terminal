@@ -120,6 +120,17 @@ define(function(require, exports, module) {
         this.reset();
     };
 
+    Paint.prototype.clone = function() {
+        return new Paint({
+            'reverse-video'    : this['reverse-video'],
+            'color'            : this['color'],
+            'background-color' : this['background-color'],
+            'font-weight'      : this['font-weight'],
+            'font-family'      : this['font-family'],
+            'font-size'        : this['font-size'],
+        });
+    };
+
     /**
      * Return the width of the text
      * 

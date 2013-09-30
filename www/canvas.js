@@ -106,6 +106,33 @@ define(function(require, exports, module) {
     };
 
     /**
+     * Dump this canvas, and insert a empty buffer
+     */
+    Canvas.prototype.clear = function() {
+        var width = this.width;
+        var height = this.height;
+
+        for (var y = 0; y < height; y++) {
+            var line = document.createElement('DIV');
+            var text = document.createTextNode('');
+
+            for (var x = 0; x < width; x++) {
+                text.appendData(' ');
+                this.matrix.set(x, y, {
+                    data : ' ',
+                    dom  : text,
+                    left : x,
+                    right : width - x - 1,
+                });
+            }
+
+            line.appendChild(text);
+            this.holder.appendChild(line);
+            this.holder.scrollTop += line.offsetHeight;
+        }
+    };
+
+    /**
      * Clear the specified region
      * 
      * @param x {@link Number}
@@ -123,6 +150,15 @@ define(function(require, exports, module) {
         for (var y = top; y < bottom; y++) {
             this.drawText(spaces, left, y);
         }
+    };
+
+    /**
+     * Draw cursor at the specified position
+     */
+    Canvas.prototype.drawCursor = function(x, y) {
+        var entry = this.matrix.get(x, y);
+
+        this.drawText(entry.data, x, y, entry.paint);
     };
 
     /**
@@ -180,7 +216,7 @@ define(function(require, exports, module) {
                     first.parentNode.removeChild(first);
                 }
 
-                updateMatrix.call(this, left, right, y, node, text);
+                updateMatrix.call(this, left, right, y, node, text, paint);
                 break;
             case Node.ELEMENT_NODE:
                 if (start.left != 0 && end.right != 0) {
@@ -207,7 +243,7 @@ define(function(require, exports, module) {
                     first.parentNode.removeChild(first);
                 }
 
-                updateMatrix.call(this, left, right, y, node, text);
+                updateMatrix.call(this, left, right, y, node, text, paint);
                 break;
             }
         } else {
@@ -238,7 +274,7 @@ define(function(require, exports, module) {
                 last.parentNode.removeChild(last);
             }
 
-            updateMatrix.call(this, left, right, y, node, text);
+            updateMatrix.call(this, left, right, y, node, text, paint);
         }
     };
 
@@ -406,7 +442,7 @@ define(function(require, exports, module) {
     function clearLast(last, end, txtLast) {
         switch (last.nodeType) {
         case Node.TEXT_NODE:
-            last.deleteData(0, end.left);
+            last.deleteData(0, end.left + 1);
             break;
         case Node.ELEMENT_NODE:
             last.innerText = txtLast.substring(end.left + 1);
@@ -425,13 +461,14 @@ define(function(require, exports, module) {
         }
     }
 
-    function updateMatrix(left, right, y, dom, text) {
+    function updateMatrix(left, right, y, dom, text, paint) {
         for (var i = left; i < right; i++) {
             var entry = this.matrix.get(i, y);
 
             entry.left = i - left;
             entry.right = right - i - 1;
             entry.dom = dom;
+            entry.paint = paint ? paint.clone() : null;
 
             if (text instanceof Array || 'string' === typeof text) {
                 entry.data = text[i - left];
