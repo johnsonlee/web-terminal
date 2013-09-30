@@ -258,6 +258,17 @@ define(function(require, exports, module) {
             },
 
             /*
+             * Deletes specified number of lines in the scrolling region.
+             * As lines are deleted, lines below the cursor and in the
+             * scrolling region move up. The terminal add blank lines with
+             * no visual character attributes at the bottom of scrolling
+             * region.
+             */
+            'DL' : function(token) {
+                $canvas.scrollUp($row - 1, token.value);
+            },
+
+            /*
              * Delete specified number of characters from
              * the cursor position to the right.
              */
