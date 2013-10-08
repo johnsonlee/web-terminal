@@ -16,7 +16,7 @@ define(function(require, exports, module) {
             magenta : ['#75507b', '#ad7fa8'],
             cyan    : ['#06989a', '#34e2e2'],
             white   : ['#d3d7cf', '#ffffff'],
-        }
+        },
     }
 
     var DEFAULT_PAINT = {
@@ -217,13 +217,11 @@ define(function(require, exports, module) {
                 case 2:
                     if ($state.alternateMode) {
                         $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
-                        $row = 1;
-                        $col = 1;
                     } else {
                         $canvas.clear();
-                        $row = 1;
-                        $col = 1;
                     }
+
+                    this.moveCursorTo(1, 1);
                     break;
                 }
             },
@@ -312,7 +310,8 @@ define(function(require, exports, module) {
                     $canvas.clearRegion(0, $row - 1, $canvas.width, $row);
                     break;
                 }
-                updateUI.call(this);
+
+                this.updateUI();
             },
 
             /*
@@ -471,7 +470,7 @@ define(function(require, exports, module) {
                     }
                 });
 
-                updateUI.call($this);
+                $this.updateUI();
             });
 
             $cursor.setAttribute('class', 'cursor');
@@ -662,7 +661,7 @@ define(function(require, exports, module) {
             };
 
             $terminal.onscroll = function(event) {
-                updateCursor.call(this);
+                $this.updateUI();
             };
 
             $terminal.focus();
@@ -725,7 +724,7 @@ define(function(require, exports, module) {
             $canvas.resize(cols, rows);
             $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
 
-            updateUI.call(this);
+            this.updateUI();
 
             if ('function' === typeof callback) {
                 callback(cols, rows);
@@ -744,24 +743,17 @@ define(function(require, exports, module) {
             $row = row;
             $col = column;
 
-            updateCursor.call(this);
+            this.updateUI();
         }
 
-        function updateCursor() {
+        /**
+         * Update the terminal UI
+         */
+        this.updateUI = function() {
             var fm = $paint.measureText(' ');
 
             $cursor.style.top = (($row - 1) * fm.height - $terminal.scrollTop) + 'px';
             $cursor.style.left = (($col - 1) * fm.width) + 'px';
-        }
-
-        function updateUI() {
-            var n = $terminal.childNodes.length;
-
-            updateCursor.call(this);
-        }
-
-        function isFunctionKey(keyCode) {
-            return (keyCode >= 0x70 && keyCode <= 0x7B);
         }
     };
 
