@@ -1,13 +1,7 @@
 define(function(require, exports, module) {
 
-    var Paint = require('www/paint');
-    var Matrix = require('www/matrix');
-
-    var styles = [
-        'color',
-        'backgroundColor',
-        'fontWeight',
-    ];
+    var Paint = require('./paint');
+    var Matrix = require('./matrix');
 
     /**
      * TTY canvas
@@ -183,7 +177,7 @@ define(function(require, exports, module) {
         var txtFirst = first.innerText || first.data;
         var txtLast = last.innerText || last.data;
 
-        if (first.isSameNode(last)) {
+        if (first == last) {
             if (text.length == this.matrix.width
                     && text == (first.innerText || first.data)) {
                 return;
@@ -194,8 +188,7 @@ define(function(require, exports, module) {
             switch (first.nodeType) {
             case Node.TEXT_NODE:
                 if (start.left != 0 && end.right != 0) {
-                    last = document.createTextNode('');
-                    last.appendData(txtLast.substring(end.left + 1));
+                    last = document.createTextNode(txtLast.substring(end.left + 1));
 
                     first.parentNode.insertBefore(node, first.nextSibling);
                     first.parentNode.insertBefore(last, node.nextSibling);
@@ -248,7 +241,7 @@ define(function(require, exports, module) {
             }
         } else {
             // remove nodes between start and end
-            while (first.nextSibling && !first.nextSibling.isSameNode(last)) {
+            while (first.nextSibling && first.nextSibling != last) {
                 first.parentNode.removeChild(first.nextSibling);
             }
 

@@ -1,10 +1,10 @@
 define(function(require, exports, module) {
 
-    var Paint = require('www/paint');
-    var Matrix = require('www/matrix');
-    var Canvas = require('www/canvas');
-    var AnsiParser = require('www/ansi');
-    var VirtualKey = require('www/vkcode');
+    var Paint = require('./paint');
+    var Matrix = require('./matrix');
+    var Canvas = require('./canvas');
+    var AnsiParser = require('./ansi');
+    var VirtualKey = require('./vkcode');
 
     var THEMES = {
         tango : {

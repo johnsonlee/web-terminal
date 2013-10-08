@@ -778,8 +778,8 @@
  */
 define(function(require, exports, module) {
 
-    var Stack = require('www/stack');
-    var StringReader = require('www/stringreader');
+    var Stack = require('./stack');
+    var StringReader = require('./stringreader');
 
     /**
      * Convert ASCII code to char
