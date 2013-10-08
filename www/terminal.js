@@ -37,26 +37,26 @@ define(function(require, exports, module) {
         var $row = 1;
         var $state = {};
         var $theme = 'tango';
+        var $connection = null;
         var $paint = new Paint(DEFAULT_PAINT);
         var $parser = new AnsiParser();
         var $cursor = document.createElement('DIV');
         var $terminal = document.createElement('DIV');
         var $container = document.createElement('DIV');
         var $canvas = new Canvas($terminal);
-        var $connection = null;
         var $renderers = {
             /*
              * Sounds the bell tone
              */
-            'BEL'  : function(token) {
+            'BEL' : function(token) {
                 // console.log('\u0007');
             },
 
             /*
              * Moves the cursor one character position to the left
              */
-            'BS'   : function(token) {
-                moveCursorTo.call(this, $row, $col - 1);
+            'BS' : function(token) {
+                this.moveCursorTo($row, $col - 1);
             },
 
             /*
@@ -104,6 +104,7 @@ define(function(require, exports, module) {
                         $state.originMode = true;
                         break;
                     case 47: // Swith to alternate screen buffer
+                    case 1047:
                         $state.alternateMode = true;
                         $state.canvas = $canvas;
                         $state.norscrn = [];
@@ -116,6 +117,9 @@ define(function(require, exports, module) {
                         $canvas = new Canvas($terminal);
                         $canvas.resize($state.canvas.width, $state.canvas.height);
                         $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
+                        break;
+                    case 69: // Enable left and right margin
+                        $state.vspmode = true;
                         break;
                     case 1000: // Enable normal mouse tracking
                         $state.mouseTrackable = true;
@@ -139,6 +143,7 @@ define(function(require, exports, module) {
                         $state.originMode = false;
                         break;
                     case 47: // Swith to normal screen buffer
+                    case 1047:
                         $state.alternateMode = false;
 
                         while ($terminal.lastChild) {
@@ -150,6 +155,9 @@ define(function(require, exports, module) {
                         }
 
                         $canvas = $state.canvas;
+                        break;
+                    case 69: // Disable left and right margin
+                        $state.vspmode = false;
                         break;
                     case 1000: // Disable mouse tracking
                         $state.mouseTrackable = false;
@@ -172,35 +180,35 @@ define(function(require, exports, module) {
                 $state.keypadMode = WebTerminal.NORMAL_KEYPAD_MODE;
             },
 
-            'CUU'  : function(token) {
-                moveCursorTo.call(this, $row - token.value, $col);
+            'CUU' : function(token) {
+                this.moveCursorTo($row - token.value, $col);
             },
-            'CUD'  : function(token) {
-                moveCursorTo.call(this, $row + token.value, $col);
+            'CUD' : function(token) {
+                this.moveCursorTo($row + token.value, $col);
             },
-            'CUF'  : function(token) {
-                moveCursorTo.call(this, $row, $col + token.value);
+            'CUF' : function(token) {
+                this.moveCursorTo($row, $col + token.value);
             },
-            'CUB'  : function(token) {
-                moveCursorTo.call(this, $row, $col - token.value);
+            'CUB' : function(token) {
+                this.moveCursorTo($row, $col - token.value);
             },
-            'CNL'  : function(token) {
-                moveCursorTo.call(this, $row + token.value, 1);
+            'CNL' : function(token) {
+                this.moveCursorTo($row + token.value, 1);
             },
-            'CPL'  : function(token) {
-                moveCursorTo.call(this, $row - token.value, 1);
+            'CPL' : function(token) {
+                this.moveCursorTo($row - token.value, 1);
             },
-            'CHA'  : function(token) {
-                moveCursorTo.call(this, $row, token.value);
+            'CHA' : function(token) {
+                this.moveCursorTo($row, token.value);
             },
-            'CUP'  : function(token) {
-                moveCursorTo.call(this, token.values[0], token.values[1]);
+            'CUP' : function(token) {
+                this.moveCursorTo(token.values[0], token.values[1]);
             },
 
             /*
              * Erase display
              */
-            'ED'   : function(token) {
+            'ED' : function(token) {
                 switch (token.value) {
                 case 0:
                     break;
@@ -225,7 +233,7 @@ define(function(require, exports, module) {
              * If cursor is at bottom margin, then screen
              * performs a scroll-up.
              */
-            'LF'   : function() {
+            'LF' : function() {
                 var height = $canvas.height;
 
                 if ($row + 1 > $canvas.height) {
@@ -234,7 +242,7 @@ define(function(require, exports, module) {
                     $terminal.scrollTop = $terminal.scrollHeight;
                 }
 
-                moveCursorTo.call(this, Math.min($row + 1, height), 1);
+                this.moveCursorTo(Math.min($row + 1, height), 1);
 
                 if ($row > $canvas.marginBottom) {
                     $canvas.scrollUp($row - 1, 1);
@@ -242,7 +250,7 @@ define(function(require, exports, module) {
             },
 
             'CR' : function(token) {
-                moveCursorTo.call(this, $row, 1);
+                this.moveCursorTo($row, 1);
             },
 
             /*
@@ -286,7 +294,7 @@ define(function(require, exports, module) {
                     $canvas.scrollDown($row, 1);
                 }
 
-                moveCursorTo.call(this, Math.max(1, $row - 1), $col);
+                this.moveCursorTo(Math.max(1, $row - 1), $col);
             },
 
             /*
@@ -310,14 +318,14 @@ define(function(require, exports, module) {
             /*
              * Operating system command
              */
-            'OSC'  : function(token) {
+            'OSC' : function(token) {
                 this.title = token.title;
             },
 
             /*
              * Select graphics rendition
              */
-            'SGR'  : function(token) {
+            'SGR' : function(token) {
                 for (var i = 0; i < token.values.length; i++) {
                     var value = token.values[i];
 
@@ -372,40 +380,59 @@ define(function(require, exports, module) {
 
             /*
              * Set top and bottom margin
+             * Moves the cursor to column 1, line 1 of the page
              */
             'DECSTBM' : function(token) {
-                moveCursorTo.call(this, 1, 1);
+                this.moveCursorTo(1, 1);
                 $canvas.marginTop = token.values[0];
                 $canvas.marginBottom = token.values[1];
             },
 
             /*
-             * Set left and right margin. It's used for screen scrolling
+             * Set left and right margin
+             * Moves the cursor to column 1, line 1 of the page
              */
             'DECSLRM' : function(token) {
-                moveCursorTo.call(this, 1, 1);
+                if ($state.vspmode) {
+                    this.moveCursorTo(1, 1);
+                }
             },
 
             /*
              * Set left and right margin mode
              */
             'DECLRMM' : function(token) {
-                // TODO
+                $state.vspmode = true;
             },
         };
 
+        /**
+         * @type {link Number}
+         * 
+         * The number of columns
+         */
         Object.defineProperty(this, 'width', {
             get : function() {
                 return $terminal.offsetParent.offsetWidth;
             },
         });
 
+        /**
+         * @type {link Number}
+         * 
+         * The number of rows
+         */
         Object.defineProperty(this, 'height', {
             get : function() {
                 return $terminal.offsetParent.offsetHeight;
             },
         });
 
+        /**
+         * @type {@link String}
+         * 
+         * The title of this terminal
+         */
         Object.defineProperty(this, 'title', {
             get : function() {
                 return document.title;
@@ -425,6 +452,9 @@ define(function(require, exports, module) {
          */
         this.start = function(url, container) {
             var $this = this;
+            var $resize = window.resize;
+
+            container.appendChild($container);
 
             $connection = io.connect(url);
             $connection.on('output', function(data) {
@@ -440,13 +470,18 @@ define(function(require, exports, module) {
                         console.error(e.stack);
                     }
                 });
+
                 updateUI.call($this);
             });
 
             $cursor.setAttribute('class', 'cursor');
+
+            $container.appendChild($cursor);
+            $container.appendChild($terminal);
+            $container.setAttribute('class', 'terminal-container');
+
             $terminal.setAttribute('class', 'terminal');
             $terminal.setAttribute('tabindex', '-1');
-            $container.setAttribute('class', 'terminal-container');
 
             $terminal.onkeydown = function(event) {
                 switch (event.keyCode) {
@@ -630,18 +665,19 @@ define(function(require, exports, module) {
                 updateCursor.call(this);
             };
 
-            $container.appendChild($cursor);
-            $container.appendChild($terminal);
-            container.appendChild($container);
             $terminal.focus();
-            resize.call(this);
 
-            window.onbeforeunload = function(event) {
-                if ($state.alternateMode) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    return false;
+            window.onresize = function(event) {
+                if ($resize) {
+                    $resize(event);
                 }
+
+                this.measureLayout(function(cols, rows) {
+                    $connection.emit('resize', {
+                        cols : cols,
+                        rows : rows,
+                    });
+                });
             };
 
             window.setInterval(function() {
@@ -655,39 +691,59 @@ define(function(require, exports, module) {
                     $cursor.setAttribute('class', className);
                 }
             }, 500);
+
+            this.measureLayout(function(cols, rows) {
+                $connection.emit('start', {
+                    cols : cols,
+                    rows : rows,
+                });
+            });
         };
 
-        function resize() {
+        /**
+         * Measure the terminal layout
+         * 
+         * @param callback {@link Function}
+         *           A callback function
+         */
+        this.measureLayout = function(callback) {
             var fm = $paint.measureText(' ');
 
-            $container.style.width = $container.offsetParent.clientWidth;
-            $container.style.height = $container.offsetParent.clientHeight;
+            $container.style.width = $container.offsetParent.clientWidth + 'px';
+            $container.style.height = $container.offsetParent.clientHeight + 'px';
 
             var cols = Math.floor(this.width / fm.width);
             var rows = Math.floor(this.height / fm.height);
+
             $cursor.style.width = fm.width + 'px';
             $cursor.style.height = fm.height + 'px';
+
             $terminal.style.width = this.width + 'px';
             $terminal.style.height = (fm.height * rows) + 'px';
             $terminal.style.paddingBottom = (this.height - fm.height * rows) + 'px';
 
-            $canvas.resize(
-                Math.floor(this.width / fm.width),
-                Math.floor(this.height / fm.height)
-            );
+            $canvas.resize(cols, rows);
             $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
 
-            $connection.emit('resize', {
-                cols : $canvas.width,
-                rows : $canvas.height,
-            });
-
             updateUI.call(this);
+
+            if ('function' === typeof callback) {
+                callback(cols, rows);
+            }
         };
 
-        function moveCursorTo(row, column) {
+        /**
+         * Move cursor the the specified position
+         * 
+         * @param row {@link Number}
+         *           The row number where cursor move to
+         * @param column {@link Number}
+         *           The column number where cursor move to
+         */
+        this.moveCursorTo = function(row, column) {
             $row = row;
             $col = column;
+
             updateCursor.call(this);
         }
 
@@ -707,10 +763,6 @@ define(function(require, exports, module) {
         function isFunctionKey(keyCode) {
             return (keyCode >= 0x70 && keyCode <= 0x7B);
         }
-
-        /*window.onresize = function() {
-            resize.call($this);
-        };*/
     };
 
     WebTerminal.NORMAL_KEYPAD_MODE = 0;
