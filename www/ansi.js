@@ -1499,9 +1499,27 @@ define(function(require, exports, module) {
             case 0x27: /* ' */
                 break;
             case 0x28: /* ( */
+                switch (c = reader.read()) {
+                case 0x30: /* 0 */
+                case 0x41: /* A */
+                case 0x42: /* B */
+                    break;
+                default:
+                    reader.unread();
+                    break;
+                }
                 dumpToken('GZD4', prerenderer);
                 break;
             case 0x29: /* ) */
+                switch (c = reader.read()) {
+                case 0x30: /* 0 */
+                case 0x41: /* A */
+                case 0x42: /* B */
+                    break;
+                default:
+                    reader.unread();
+                    break;
+                }
                 dumpToken('G1D4', prerenderer);
                 break;
             case 0x2A: /* * */

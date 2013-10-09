@@ -35,30 +35,31 @@ var httpServer = http.createServer(app);
 var socketManager = socket.listen(httpServer);
 
 socketManager.sockets.on('connection', function(socket) {
-    var bash = pty.spawn('bash', [], {
-        name : 'xterm-color',
-        cols : 80,
-        rows : 30,
-        cwd  : process.env.HOME,
-        env  : process.env,
-    });
-
-    bash.on('data', function(data) {
-        console.log(JSON.stringify(data));
-
-        socket.emit('output', {
-            message : data,
+    socket.on('terminal', function(data) {
+        var bash = pty.spawn('bash', [], {
+            name : 'xterm-color',
+            cols : data.cols,
+            rows : data.rows,
+            cwd  : process.env.HOME,
+            env  : process.env,
         });
-    });
 
-    socket.on('resize', function(data) {
-        bash.resize(data.cols, data.rows);
-        console.log('resize terminal: ' + data.cols + 'x' + data.rows);
-    });
+        bash.on('data', function(data) {
+            console.log(JSON.stringify(data));
 
-    socket.on('send', function(data) {
-        console.log('received data: ' + JSON.stringify(data));
-        bash.write(data.message);
+            socket.emit('output', {
+                message : data,
+            });
+        });
+
+        socket.on('resize', function(data) {
+            bash.resize(data.cols, data.rows);
+        });
+
+        socket.on('send', function(data) {
+            console.log('received data: ' + JSON.stringify(data));
+            bash.write(data.message);
+        });
     });
 });
 

@@ -667,7 +667,7 @@ define(function(require, exports, module) {
             $terminal.focus();
 
             window.onresize = function(event) {
-                if ($resize) {
+                if ('function' === typeof $resize) {
                     $resize(event);
                 }
 
@@ -692,7 +692,7 @@ define(function(require, exports, module) {
             }, 500);
 
             this.measureLayout(function(cols, rows) {
-                $connection.emit('start', {
+                $connection.emit('terminal', {
                     cols : cols,
                     rows : rows,
                 });
