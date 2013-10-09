@@ -1090,6 +1090,12 @@ define(function(require, exports, module) {
             case 'DECSLE':
                 prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)'{$/, [0]);
                 break;
+            case 'G1D4':
+                token.value = token.image.charCodeAt(token.image.length - 1);
+                break;
+            case 'GZD4':
+                token.value = token.image.charCodeAt(token.image.length - 1);
+                break;
             case 'OSC':
                 token.title = token.image.replace(/^\u001b\]\d+;/, '');
                 break;
@@ -1442,14 +1448,29 @@ define(function(require, exports, module) {
                 dumpToken('C1D', prerenderer);
                 break;
             case 0x23: /* # */
-                switch (c = reader.read()) {
+                c = reader.read();
+                $stack.push(charof(c));
+
+                switch (c) {
+                case 0x33: /* 3 */
+                    dumpToken('DECDHL', prerenderer);
+                    break esc;
+                case 0x34: /* 4 */
+                    dumpToken('DECDHL', prerenderer);
+                    break esc;
+                case 0x35: /* 5 */
+                    dumpToken('DECSWL', prerenderer);
+                    break esc;
+                case 0x36: /* 6 */
+                    dumpToken('DECDWL', prerenderer);
+                    break esc;
                 case 0x38: /* 8 */
-                    $stack.push(charof(c));
                     dumpToken('DECALN', prerenderer);
                     break esc;
                 }
 
                 reader.unread();
+                $stack.pop();
                 break;
             case 0x24: /* $ */
                 c = reader.read();
@@ -1483,11 +1504,20 @@ define(function(require, exports, module) {
                 reader.unread();
                 break;
             case 0x25: /* % */
-                switch (c = reader.read()) {
+                c = reader.read();
+                $stack.push(charof(c));
+
+                switch (c) {
+                case 0x38: /* 8 */
+                    break;
+                case 0x40: /* @ */
+                    break;
+                case 0x47: /* G */
+                    break;
                 case 0x2F: /* / */
-                    $stack.push(charof(c));
                     break;
                 default:
+                    $stack.pop();
                     reader.unread();
                     break;
                 }
@@ -1503,11 +1533,14 @@ define(function(require, exports, module) {
                 case 0x30: /* 0 */
                 case 0x41: /* A */
                 case 0x42: /* B */
+                case 0x55: /* U */
+                    $stack.push(charof(c));
                     break;
                 default:
                     reader.unread();
                     break;
                 }
+
                 dumpToken('GZD4', prerenderer);
                 break;
             case 0x29: /* ) */
@@ -1515,11 +1548,14 @@ define(function(require, exports, module) {
                 case 0x30: /* 0 */
                 case 0x41: /* A */
                 case 0x42: /* B */
+                case 0x55: /* U */
+                    $stack.push(charof(c));
                     break;
                 default:
                     reader.unread();
                     break;
                 }
+
                 dumpToken('G1D4', prerenderer);
                 break;
             case 0x2A: /* * */

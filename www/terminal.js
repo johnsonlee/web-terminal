@@ -28,6 +28,20 @@ define(function(require, exports, module) {
         'font-weight'      : 'normal',
     };
 
+    var BOX_DRAWING_CHARS = {
+        'j' : '┘',
+        'k' : '┐',
+        'l' : '┌',
+        'm' : '└',
+        'n' : '┼',
+        'q' : '─',
+        't' : '├',
+        'u' : '┤',
+        'v' : '┴',
+        'w' : '┬',
+        'x' : '│',
+    };
+
     /**
      * Web Terminal
      */
@@ -37,6 +51,8 @@ define(function(require, exports, module) {
         var $row = 1;
         var $state = {};
         var $theme = 'tango';
+        var $charset = 0;
+        var $charsets = [];
         var $connection = null;
         var $paint = new Paint(DEFAULT_PAINT);
         var $parser = new AnsiParser();
@@ -73,6 +89,7 @@ define(function(require, exports, module) {
                 $state.col = $col;
                 $state.row = $row;
                 $state.paint = $paint;
+                $state.charset = $charset;
                 $state.scrollTop = $terminal.scrollTop;
                 $col = $row = 1;
                 $paint = new Paint(DEFAULT_PAINT);
@@ -86,6 +103,7 @@ define(function(require, exports, module) {
                 $col = $state.col;
                 $row = $state.row;
                 $paint = $state.paint;
+                $charset = $state.charset;
                 $terminal.scrollTop = $state.scrollTop;
             },
 
@@ -373,7 +391,24 @@ define(function(require, exports, module) {
             },
 
             'TEXT' : function(token) {
-                $canvas.drawText(token.image, $col - 1, $row - 1, $paint.isDefault() ? null : $paint);
+                var text = token.image;
+                var paint = $paint.isDefault() ? null : $paint;
+
+                switch ($charsets[$charset]) {
+                case WebTerminal.CHARSET_ASCII:
+                    break;
+                case WebTerminal.CHARSET_LINEDRAW:
+                    for (var i in BOX_DRAWING_CHARS) {
+                        text = text.replace(new RegExp(i, 'gm'), BOX_DRAWING_CHARS[i]);
+                    }
+                    break;
+                case WebTerminal.CHARSET_GBCHR:
+                    break;
+                case WebTerminal.CHARSET_SCOACS:
+                    break;
+                }
+
+                $canvas.drawText(text, $col - 1, $row - 1, paint);
                 $col += token.image.length;
             },
 
@@ -402,6 +437,113 @@ define(function(require, exports, module) {
              */
             'DECLRMM' : function(token) {
                 $state.vspmode = true;
+            },
+
+            /*
+             * Map G1 to GL
+             */
+            'G1D4' : function(token) {
+                switch (token.value) {
+                case 0x30: /* 0 */
+                    $charsets[1] = WebTerminal.CHARSET_LINEDRAW;
+                    break;
+                case 0x41: /* A */
+                    $charsets[1] = WebTerminal.CHARSET_GBCHR;
+                    break;
+                case 0x42: /* B */
+                    $charsets[1] = WebTerminal.CHARSET_ASCII;
+                    break;
+                case 0x55: /* U */
+                    $charsets[1] = WebTerminal.CHARSET_SCOACS;
+                    break;
+                }
+            },
+
+            'GZD4' : function(token) {
+                switch (token.value) {
+                case 0x30: /* 0 */
+                    $charsets[0] = WebTerminal.CHARSET_LINEDRAW;
+                    break;
+                case 0x41: /* A */
+                    $charsets[0] = WebTerminal.CHARSET_GBCHR;
+                    break;
+                case 0x42: /* B */
+                    $charsets[0] = WebTerminal.CHARSET_ASCII;
+                    break;
+                case 0x55: /* U */
+                    $charsets[0] = WebTerminal.CHARSET_SCOACS;
+                    break;
+                }
+            },
+
+            /*
+             * Maps G0 character set into GL
+             */
+            'LS0' : function(token) {
+                $charset = 0;
+            },
+
+            /*
+             * Maps G1 character set into GL
+             */
+            'LS1' : function(token) {
+                $charset = 1;
+            },
+
+            /*
+             * Maps G2 character set into GL
+             */
+            'LS2' : function(token) {
+                $charset = 1;
+            },
+
+            /*
+             * Maps G3 character set into GL
+             */
+            'LS3' : function(token) {
+                $charset = 1;
+            },
+
+            /*
+             * Maps G0 character set into GR
+             */
+            'LS0R' : function(token) {
+                $charset = 0;
+            },
+
+            /*
+             * Maps G1 character set into GR
+             */
+            'LS1R' : function(token) {
+                $charset = 1;
+            },
+
+            /*
+             * Maps G2 character set into GR
+             */
+            'LS2R' : function(token) {
+                $charset = 1;
+            },
+
+            /*
+             * Maps G3 character set into GR
+             */
+            'LS3R' : function(token) {
+                $charset = 1;
+            },
+
+            /*
+             * Maps G1 character set into GL
+             */
+            'SO' : function(token) {
+                $charset = 1;
+            },
+
+            /*
+             * Maps G0 character set to GL
+             */
+            'SI' : function(token) {
+                $charset = 0;
             },
         };
 
@@ -761,6 +903,12 @@ define(function(require, exports, module) {
     WebTerminal.APPLICATION_KEYPAD_MODE = 1;
     WebTerminal.NORMAL_CURSOR_KEY_MODE = 0;
     WebTerminal.APPLICATION_CURSOR_KEY_MODE = 1;
+
+    WebTerminal.CHARSET_MASK     = 0xFFFFFF00;
+    WebTerminal.CHARSET_ASCII    = 0x0000D800;
+    WebTerminal.CHARSET_GBCHR    = 0x0000DB00;
+    WebTerminal.CHARSET_LINEDRAW = 0x0000D900;
+    WebTerminal.CHARSET_SCOACS   = 0x0000DA00;
 
     module.exports = WebTerminal;
 });
