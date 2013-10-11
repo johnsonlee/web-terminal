@@ -895,6 +895,9 @@ define(function(require, exports, module) {
                     break;
                 }
 
+                // scroll to the bottom
+                $terminal.scrollTop = $terminal.scrollHeight - $terminal.offsetHeight;
+
                 if (seq.length) {
                     $connection.emit('terminal.input', {
                         message : seq.join(''),
@@ -903,9 +906,6 @@ define(function(require, exports, module) {
                     event.stopPropagation();
                     return false;
                 }
-
-                // scroll to the bottom
-                $terminal.scrollTop = $terminal.scrollHeight - $terminal.offsetHeight;
             }).on('blur', function(event) {
                 if ($interval) {
                     window.clearInterval($interval);
