@@ -43,14 +43,6 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Event binder
-     */
-    function on(type, callback) {
-       this['on' + type] = callback;
-       return this;
-    }
-
-    /**
      * Web Terminal
      */
     var WebTerminal = function() {
@@ -132,6 +124,18 @@ define(function(require, exports, module) {
                     case 6:  // Enable origin mode
                         $state.originMode = true;
                         break;
+                    case 9: // Enable X10 mouse tracking
+                        $state.x10MouseTrackable = true;
+                        break;
+                    case 1000: // Enable X11 mouse tracking
+                        $state.x11MouseTrackable = true;
+                        break;
+                    case 1002: // Enable button-event mouse tracking
+                        $state.buttonEventMouseTrackable = true;
+                        break;
+                    case 1003: // Enable any-event mouse tracking
+                        $state.anyEventMouseTrackable = true;
+                        break;
                     case 47: // Swith to alternate screen buffer
                     case 1047:
                         $state.alternateMode = true;
@@ -170,6 +174,18 @@ define(function(require, exports, module) {
                         break;
                     case 6:  // Disable origin mode
                         $state.originMode = false;
+                        break;
+                    case 9: // Enable X10 mouse tracking
+                        $state.x10MouseTrackable = false;
+                        break;
+                    case 1000: // Enable X11 mouse tracking
+                        $state.x11MouseTrackable = false;
+                        break;
+                    case 1002: // Enable button-event mouse tracking
+                        $state.buttonEventMouseTrackable = false;
+                        break;
+                    case 1003: // Enable any-event mouse tracking
+                        $state.anyEventMouseTrackable = false;
                         break;
                     case 47: // Swith to normal screen buffer
                     case 1047:
@@ -739,15 +755,16 @@ define(function(require, exports, module) {
                 window.clearInterval($interval);
             }
 
-            $terminal.onblur = null;
-            $terminal.onfocus = null;
-            $terminal.onscroll = null;
-            $terminal.onkeypress = null;
-            $terminal.onkeypress = null;
-            $terminal.onmousewheel = null;
+            $terminal
+            .on('blur')
+            .on('focus')
+            .on('scroll')
+            .on('keypress')
+            .on('mousewheel');
 
-            window.onunload = null;
-            window.onresize = $resize;
+            window
+            .on('unload')
+            .on('resize', $resize);
 
             $cursor.setAttribute('class', 'cursor steady');
         };
@@ -756,7 +773,7 @@ define(function(require, exports, module) {
          * Active this terminal
          */
         this.active = function() {
-            $terminal.onkeydown = function(event) {
+            $terminal.on('keydown', function(event) {
                 var seq = [];
 
                 switch (event.keyCode) {
@@ -769,7 +786,7 @@ define(function(require, exports, module) {
                     break;
                 case VirtualKey.VK_TAB:
                     if (event.shiftKey) {
-                        // TODO
+                        seq.push('\x1b[Z');
                     } else {
                         seq.push('\t');
                     }
@@ -783,6 +800,21 @@ define(function(require, exports, module) {
                     break;
                 case VirtualKey.VK_ESCAPE:
                     seq.push('\x1b');
+                    break;
+                case VirtualKey.VK_SPACE:
+                    seq.push('\x20');
+                    break;
+                case VirtualKey.VK_PRIOR:
+                    seq.push('\x1b[5~');
+                    break;
+                case VirtualKey.VK_NEXT:
+                    seq.push('\x1b[6~');
+                    break;
+                case VirtualKey.VK_HOME:
+                    seq.push('\x1bOH');
+                    break;
+                case VirtualKey.VK_END:
+                    seq.push('\x1bOF');
                     break;
                 case VirtualKey.VK_UP:
                     if (event.altKey) {
@@ -811,6 +843,12 @@ define(function(require, exports, module) {
                     } else {
                         seq.push('\x1bOD');
                     }
+                    break;
+                case VirtualKey.VK_INSERT:
+                    seq.push('\x1b[2~');
+                    break;
+                case VirtualKey.VK_DELETE:
+                    seq.push('\x1b[3~');
                     break;
                 case VirtualKey.VK_F1:
                     seq.push('\x1bOP');
@@ -868,17 +906,13 @@ define(function(require, exports, module) {
 
                 // scroll to the bottom
                 $terminal.scrollTop = $terminal.scrollHeight - $terminal.offsetHeight;
-            };
-
-            $terminal.onblur = function(event) {
+            }).on('blur', function(event) {
                 if ($interval) {
                     window.clearInterval($interval);
                 }
 
                 $cursor.setAttribute('class', 'cursor steady');
-            };
-
-            $terminal.onfocus = function(event) {
+            }).on('focus', function(event) {
                 if ($interval) {
                     window.clearInterval($interval);
                 }
@@ -891,36 +925,51 @@ define(function(require, exports, module) {
                         $cursor.setAttribute('class', 'cursor');
                     }
                 }, 500);
-            };
-
-            $terminal.onkeypress = function(event) {
+            }).on('keypress', function(event) {
                 $connection.emit('terminal.input', {
                     message : String.fromCharCode(event.keyCode)
                 });
-            };
-
-            $terminal.onmousewheel = function(event) {
-                var fm = $paint.measureText(' ');
-                var lines = Math.floor(event.wheelDelta / fm.height);
-
-                if (Math.abs(lines) > 0) {
-                    $connection.emit('terminal.input', {
-                        message : '\x1b[' + Math.abs(lines) + (lines > 0 ? 'T' : 'S'),
-                    });
+            }).on('mousedown', function(event) {
+                if ($state.x11MouseTrackable) {
+                    // TODO
                 }
-            };
+            }).on('mousemove', function(event) {
+                // TODO
+            }).on('mouseout', function(event) {
+                // TODO
+            }).on('mouseover', function(event) {
+                // TODO
+            }).on('mouseup', function(event) {
+                if ($state.x11MouseTrackable) {
+                    // TODO
+                }
+            }).on('mousewheel', function(event) {
+                /*
+                 * If alternate mode set, then cursor up/down are sent
+                 */
+                if ($state.alternateMode) {
+                    var fm = $paint.measureText(' ');
+                    var lines = Math.floor(event.wheelDelta / fm.height);
 
-            $terminal.onscroll = function(event) {
+                    console.log('wheelDelta:' + event.wheelDelta + '; lines:' + lines);
+
+                    if (Math.abs(lines) > 0) {
+                        $connection.emit('terminal.input', {
+                            message : '\x1bO' + (lines > 0 ? 'A' : 'B'),
+                        });
+                    }
+                }
+            }).on('scroll', function(event) {
                 $this.updateUI();
-            };
+            });
 
             $terminal.focus();
 
-            window.onunload = function(event) {
+            window.on('beforeunload', function(event) {
+                // TODO
+            }).on('unload', function(event) {
                 $this.exit();
-            };
-
-            window.onresize = function(event) {
+            }).on('resize', function(event) {
                 if ('function' === typeof $resize) {
                     $resize(event);
                 }
@@ -931,8 +980,32 @@ define(function(require, exports, module) {
                         rows : rows,
                     });
                 });
+            });
+        };
+
+        /**
+         * Locate the position in terminal screen
+         * 
+         * @param x {@link Number}
+         *           X coordinate in pixel
+         * @param x {@link Number}
+         *           Y coordinate in pixel
+         * @return position of column and row
+         */
+        this.locatePosition = function(x, y) {
+            var fm = $paint.measureText(' ');
+
+            return {
+                col : Math.ceil(x / fm.width),
+                row : Math.ceil(y / fm.height),
             };
         };
+
+        window.on = $terminal.on = function(type, callback) {
+           this['on' + type] = callback;
+
+           return this;
+        }
     };
 
     /**
