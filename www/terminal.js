@@ -43,6 +43,14 @@ define(function(require, exports, module) {
     };
 
     /**
+     * Event binder
+     */
+    function on(type, callback) {
+       this['on' + type] = callback;
+       return this;
+    }
+
+    /**
      * Web Terminal
      */
     var WebTerminal = function() {
@@ -53,13 +61,16 @@ define(function(require, exports, module) {
         var $theme = 'tango';
         var $charset = 0;
         var $charsets = [];
+        var $name = null;
+        var $interval = null;
         var $connection = null;
-        var $paint = new Paint(DEFAULT_PAINT);
-        var $parser = new AnsiParser();
+        var $resize = window.resize;
         var $cursor = document.createElement('DIV');
         var $terminal = document.createElement('DIV');
         var $container = document.createElement('DIV');
+        var $parser = new AnsiParser();
         var $canvas = new Canvas($terminal);
+        var $paint = new Paint(DEFAULT_PAINT);
         var $renderers = {
             /*
              * Sounds the bell tone
@@ -583,6 +594,12 @@ define(function(require, exports, module) {
             }
         });
 
+        Object.defineProperty(this, 'name', {
+            get : function() {
+                return $name;
+            }
+        });
+
         /**
          * Start this web terminal
          * 
@@ -591,14 +608,23 @@ define(function(require, exports, module) {
          * @param container {@link HTMLElement}
          *           DOM container of this terminal
          */
-        this.start = function(url, container) {
+        this.run = function(url, container) {
+            if ($connection) {
+                return;
+            }
+
             var $this = this;
-            var $resize = window.resize;
 
             container.appendChild($container);
 
             $connection = io.connect(url);
-            $connection.on('output', function(data) {
+            $connection.on('connect', function() {
+                $this.active();
+            }).on('reconnecting', function() {
+                $this.inactive();
+            }).on('disconnect', function() {
+                $this.inactive();
+            }).on('terminal.output', function(data) {
                 console.log(JSON.stringify(data));
                 $parser.parse(data.message, function(token) {
                     var renderer = $renderers[token.type];
@@ -613,6 +639,8 @@ define(function(require, exports, module) {
                 });
 
                 $this.updateUI();
+            }).on('terminal.exit', function() {
+                $this.inactive();
             });
 
             $cursor.setAttribute('class', 'cursor');
@@ -624,221 +652,24 @@ define(function(require, exports, module) {
             $terminal.setAttribute('class', 'terminal');
             $terminal.setAttribute('tabindex', '-1');
 
-            $terminal.onkeydown = function(event) {
-                switch (event.keyCode) {
-                case VirtualKey.VK_BACK:
-                    $connection.emit('send', { message : '\b' });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_TAB:
-                    $connection.emit('send', { message : '\t' });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_RETURN:
-                    $connection.emit('send', { message : '\n' });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_ESCAPE:
-                    $connection.emit('send', { message : '\x1b' });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_UP:
-                    if (event.altKey) {
-                        $connection.emit('send', { message : '\x1b[1;3A' });
-                    } else {
-                        $connection.emit('send', { message : '\x1bOA' });
-                    }
-
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_DOWN:
-                    if (event.altKey) {
-                        $connection.emit('send', { message : '\x1b[1;3B' });
-                    } else {
-                        $connection.emit('send', { message : '\x1bOB' });
-                    }
-
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_RIGHT:
-                    if (event.altKey) {
-                        $connection.emit('send', { message : '\x1b[1;3C' });
-                    } else {
-                        $connection.emit('send', { message : '\x1bOC' });
-                    }
-
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_LEFT:
-                    if (event.altKey) {
-                        $connection.emit('send', { message : '\x1b[1;3D' });
-                    } else {
-                        $connection.emit('send', { message : '\x1bOD' });
-                    }
-
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F1:
-                    $connection.emit('send', {
-                        message : '\x1bOP',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F2:
-                    $connection.emit('send', {
-                        message : '\x1bOQ',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F3:
-                    $connection.emit('send', {
-                        message : '\x1bOR',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F4:
-                    $connection.emit('send', {
-                        message : '\x1bOS',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F5:
-                    $connection.emit('send', {
-                        message : '\x1b[15~',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F6:
-                    $connection.emit('send', {
-                        message : '\x1b[17~',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F7:
-                    $connection.emit('send', {
-                        message : '\x1b[18~',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F8:
-                    $connection.emit('send', {
-                        message : '\x1b[19~',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F9:
-                    $connection.emit('send', {
-                        message : '\x1b[20~',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                case VirtualKey.VK_F10:
-                    $connection.emit('send', {
-                        message : '\x1b[21~',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                /*case VirtualKey.VK_F11:
-                    $connection.emit('send', {
-                        message : '\x1b[23~',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;*/
-                case VirtualKey.VK_F12:
-                    $connection.emit('send', {
-                        message : '\x1b[24~',
-                    });
-                    event.preventDefault();
-                    event.stopPropagation();
-                    break;
-                default:
-                    if (0x40 <= event.keyCode && event.keyCode <= 0x5F) {
-                        if (event.ctrlKey) {
-                            $connection.emit('send', {
-                                message : String.fromCharCode(event.keyCode - 0x40),
-                            });
-                            event.preventDefault();
-                            event.stopPropagation();
-                            break;
-                        }
-                    }
-                    break;
-                }
-            };
-
-            $terminal.onkeypress = function(event) {
-                $connection.emit('send', {
-                    message : String.fromCharCode(event.keyCode)
-                });
-            };
-
-            $terminal.onmousewheel = function(event) {
-                var fm = $paint.measureText(' ');
-                var lines = Math.floor(event.wheelDelta / fm.height);
-
-                if (Math.abs(lines) > 0) {
-                    $connection.emit('send', {
-                        message : '\x1b[' + Math.abs(lines) + (lines > 0 ? 'T' : 'S'),
-                    });
-                }
-            };
-
-            $terminal.onscroll = function(event) {
-                $this.updateUI();
-            };
-
-            $terminal.focus();
-
-            window.onresize = function(event) {
-                if ('function' === typeof $resize) {
-                    $resize(event);
-                }
-
-                this.measureLayout(function(cols, rows) {
-                    $connection.emit('resize', {
-                        cols : cols,
-                        rows : rows,
-                    });
-                });
-            };
-
-            window.setInterval(function() {
-                var className = $cursor.getAttribute('class');
-
-                if (/blink/.test(className)) {
-                    className = className.replace(/\s*blink/g, '');
-                    $cursor.setAttribute('class', className);
-                } else {
-                    className += ' blink';
-                    $cursor.setAttribute('class', className);
-                }
-            }, 500);
-
             this.measureLayout(function(cols, rows) {
-                $connection.emit('terminal', {
+                $connection.emit('terminal.open', {
                     cols : cols,
                     rows : rows,
+                    name : $name,
+                }, function(data) {
+                    $name = data.name;
                 });
             });
+        };
+
+        /**
+         * Exit this terminal
+         */
+        this.exit = function() {
+            if ($connection) {
+                $connection.emit('terminal.close');
+            }
         };
 
         /**
@@ -893,15 +724,235 @@ define(function(require, exports, module) {
          */
         this.updateUI = function() {
             var fm = $paint.measureText(' ');
+            var lines = $terminal.childNodes.length;
+            var line = lines - $canvas.height + $row;
 
-            $cursor.style.top = (($row - 1) * fm.height - $terminal.scrollTop) + 'px';
+            $cursor.style.top = ((line - 1) * fm.height - $terminal.scrollTop) + 'px';
             $cursor.style.left = (($col - 1) * fm.width) + 'px';
         }
+
+        /**
+         * Inactive this terminal
+         */
+        this.inactive = function() {
+            if ($interval) {
+                window.clearInterval($interval);
+            }
+
+            $terminal.onblur = null;
+            $terminal.onfocus = null;
+            $terminal.onscroll = null;
+            $terminal.onkeypress = null;
+            $terminal.onkeypress = null;
+            $terminal.onmousewheel = null;
+
+            window.onunload = null;
+            window.onresize = $resize;
+
+            $cursor.setAttribute('class', 'cursor steady');
+        };
+
+        /**
+         * Active this terminal
+         */
+        this.active = function() {
+            $terminal.onkeydown = function(event) {
+                var seq = [];
+
+                switch (event.keyCode) {
+                case VirtualKey.VK_BACK:
+                    if (event.shiftKey) {
+                        // TODO
+                    } else {
+                        seq.push('\b');
+                    }
+                    break;
+                case VirtualKey.VK_TAB:
+                    if (event.shiftKey) {
+                        // TODO
+                    } else {
+                        seq.push('\t');
+                    }
+                    break;
+                case VirtualKey.VK_RETURN:
+                    if (event.altKey) {
+                        // TODO toggleFullscreen();
+                    } else {
+                        seq.push('\n');
+                    }
+                    break;
+                case VirtualKey.VK_ESCAPE:
+                    seq.push('\x1b');
+                    break;
+                case VirtualKey.VK_UP:
+                    if (event.altKey) {
+                        seq.push('\x1b[1;3A');
+                    } else {
+                        seq.push('\x1bOA');
+                    }
+                    break;
+                case VirtualKey.VK_DOWN:
+                    if (event.altKey) {
+                        seq.push('\x1b[1;3B');
+                    } else {
+                        seq.push('\x1bOB');
+                    }
+                    break;
+                case VirtualKey.VK_RIGHT:
+                    if (event.altKey) {
+                        seq.push('\x1b[1;3C');
+                    } else {
+                        seq.push('\x1bOC');
+                    }
+                    break;
+                case VirtualKey.VK_LEFT:
+                    if (event.altKey) {
+                        seq.push('\x1b[1;3D');
+                    } else {
+                        seq.push('\x1bOD');
+                    }
+                    break;
+                case VirtualKey.VK_F1:
+                    seq.push('\x1bOP');
+                    break;
+                case VirtualKey.VK_F2:
+                    seq.push('\x1bOQ');
+                    break;
+                case VirtualKey.VK_F3:
+                    seq.push('\x1bOR');
+                    break;
+                case VirtualKey.VK_F4:
+                    seq.push('\x1bOS');
+                    break;
+                case VirtualKey.VK_F5:
+                    seq.push('\x1b[15~');
+                    break;
+                case VirtualKey.VK_F6:
+                    seq.push('\x1b[17~');
+                    break;
+                case VirtualKey.VK_F7:
+                    seq.push('\x1b[18~');
+                    break;
+                case VirtualKey.VK_F8:
+                    seq.push('\x1b[19~');
+                    break;
+                case VirtualKey.VK_F9:
+                    seq.push('\x1b[20~');
+                    break;
+                case VirtualKey.VK_F10:
+                    seq.push('\x1b[21~');
+                    break;
+                case VirtualKey.VK_F11:
+                    seq.push('\x1b[23~');
+                    break;
+                case VirtualKey.VK_F12:
+                    seq.push('\x1b[24~');
+                    break;
+                default:
+                    if (0x40 <= event.keyCode && event.keyCode <= 0x5F) {
+                        if (event.ctrlKey) {
+                            seq.push(String.fromCharCode(event.keyCode - 0x40));
+                        }
+                    }
+                    break;
+                }
+
+                if (seq.length) {
+                    $connection.emit('terminal.input', {
+                        message : seq.join(''),
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return false;
+                }
+
+                // scroll to the bottom
+                $terminal.scrollTop = $terminal.scrollHeight - $terminal.offsetHeight;
+            };
+
+            $terminal.onblur = function(event) {
+                if ($interval) {
+                    window.clearInterval($interval);
+                }
+
+                $cursor.setAttribute('class', 'cursor steady');
+            };
+
+            $terminal.onfocus = function(event) {
+                if ($interval) {
+                    window.clearInterval($interval);
+                }
+
+                $cursor.setAttribute('class', 'cursor');
+                $interval = window.setInterval(function() {
+                    if (!/blink/.test($cursor.className)) {
+                        $cursor.setAttribute('class', 'cursor blink');
+                    } else {
+                        $cursor.setAttribute('class', 'cursor');
+                    }
+                }, 500);
+            };
+
+            $terminal.onkeypress = function(event) {
+                $connection.emit('terminal.input', {
+                    message : String.fromCharCode(event.keyCode)
+                });
+            };
+
+            $terminal.onmousewheel = function(event) {
+                var fm = $paint.measureText(' ');
+                var lines = Math.floor(event.wheelDelta / fm.height);
+
+                if (Math.abs(lines) > 0) {
+                    $connection.emit('terminal.input', {
+                        message : '\x1b[' + Math.abs(lines) + (lines > 0 ? 'T' : 'S'),
+                    });
+                }
+            };
+
+            $terminal.onscroll = function(event) {
+                $this.updateUI();
+            };
+
+            $terminal.focus();
+
+            window.onunload = function(event) {
+                $this.exit();
+            };
+
+            window.onresize = function(event) {
+                if ('function' === typeof $resize) {
+                    $resize(event);
+                }
+
+                this.measureLayout(function(cols, rows) {
+                    $connection.emit('terminal.resize', {
+                        cols : cols,
+                        rows : rows,
+                    });
+                });
+            };
+        };
     };
 
-    WebTerminal.NORMAL_KEYPAD_MODE = 0;
-    WebTerminal.APPLICATION_KEYPAD_MODE = 1;
-    WebTerminal.NORMAL_CURSOR_KEY_MODE = 0;
+    /**
+     * Normal keypad mode
+     */
+    WebTerminal.NORMAL_KEYPAD_MODE          = 0;
+
+    /**
+     * Application keypad mode
+     */
+    WebTerminal.APPLICATION_KEYPAD_MODE     = 1;
+
+    /**
+     * Normal cursor key mode
+     */
+    WebTerminal.NORMAL_CURSOR_KEY_MODE      = 0;
+
+    /**
+     * Application cursor key mode
+     */
     WebTerminal.APPLICATION_CURSOR_KEY_MODE = 1;
 
     WebTerminal.CHARSET_MASK     = 0xFFFFFF00;

@@ -18,13 +18,20 @@
             }
 
             .cursor {
-                height: 14px;
                 position: absolute;
                 background-color: white;
             }
 
             .cursor.blink {
                 opacity : 0;
+            }
+
+            .cursor.steady {
+                border: 1px solid white;
+                background-color: transparent;
+                box-sizing: border-box;
+                -moz-box-sizing: border-box;
+                -webkit-box-sizing: border-box;
             }
 
             .cursor.mask {
@@ -53,7 +60,8 @@
         </style>
         <script type="text/javascript">
             require(['www/terminal'], function(WebTerminal) {
-                new WebTerminal().start(location.protocol + '//' + location.host, document.body);
+                window.terminal = new WebTerminal();
+                window.terminal.run(location.protocol + '//' + location.host, document.body);
             });
         </script>
     </head>

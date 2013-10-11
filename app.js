@@ -14,7 +14,7 @@ var express = require('express')
 var app = express();
 
 app.configure(function() {
-    app.set('port', process.env.PORT || 3000);
+    app.set('port', process.env.PORT || 8000);
     app.set('views', __dirname + '/views');
     app.set('view engine', 'ejs');
     app.use(express.favicon());
@@ -35,7 +35,7 @@ var httpServer = http.createServer(app);
 var socketManager = socket.listen(httpServer);
 
 socketManager.sockets.on('connection', function(socket) {
-    socket.on('terminal', function(data) {
+    socket.on('terminal.open', function(data) {
         var bash = pty.spawn('bash', [], {
             name : 'xterm-color',
             cols : data.cols,
@@ -44,19 +44,28 @@ socketManager.sockets.on('connection', function(socket) {
             env  : process.env,
         });
 
+        bash.on('exit', function(data) {
+            socket.emit('terminal.exit');
+        });
+
         bash.on('data', function(data) {
             console.log(JSON.stringify(data));
 
-            socket.emit('output', {
+            socket.emit('terminal.output', {
                 message : data,
             });
         });
 
-        socket.on('resize', function(data) {
+        socket.on('terminal.close', function() {
+            console.log('closing terminal......');
+            bash.kill('SIGKILL');
+        });
+
+        socket.on('terminal.resize', function(data) {
             bash.resize(data.cols, data.rows);
         });
 
-        socket.on('send', function(data) {
+        socket.on('terminal.input', function(data) {
             console.log('received data: ' + JSON.stringify(data));
             bash.write(data.message);
         });
