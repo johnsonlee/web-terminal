@@ -582,12 +582,20 @@ define(function(require, exports, module) {
             'SI' : function(token) {
                 $charset = 0;
             },
+
+            'RM' : function(token) {
+                $state.lnmode = false;
+            },
+
+            'SM' : function(token) {
+                $state.lnmode = true;
+            },
         };
 
         /**
          * @type {link Number}
          * 
-         * The number of columns
+         * The with of this terminal in pixel
          */
         Object.defineProperty(this, 'width', {
             get : function() {
@@ -598,7 +606,7 @@ define(function(require, exports, module) {
         /**
          * @type {link Number}
          * 
-         * The number of rows
+         * The height of this terminal in pixel
          */
         Object.defineProperty(this, 'height', {
             get : function() {
@@ -620,9 +628,25 @@ define(function(require, exports, module) {
             }
         });
 
+        /**
+         * @type {@link String}
+         * 
+         * The name of this terminal
+         */
         Object.defineProperty(this, 'name', {
             get : function() {
                 return $name;
+            }
+        });
+
+        /**
+         * @type {@link Number}
+         * 
+         * The number of lines in this terminal
+         */
+        Object.defineProperty(this, 'lines', {
+            get : function() {
+                return $terminal.childNodes.length;
             }
         });
 
@@ -679,6 +703,9 @@ define(function(require, exports, module) {
             $terminal.setAttribute('tabindex', '-1');
 
             this.measureLayout(function(cols, rows) {
+                $canvas.resize(cols, rows);
+                $canvas.clearRegion(0, 0, cols, rows);
+
                 $connection.emit('terminal.open', {
                     cols : cols,
                     rows : rows,
@@ -719,9 +746,6 @@ define(function(require, exports, module) {
             $terminal.style.width = this.width + 'px';
             $terminal.style.height = (fm.height * rows) + 'px';
             $terminal.style.paddingBottom = (this.height - fm.height * rows) + 'px';
-
-            $canvas.resize(cols, rows);
-            $canvas.clearRegion(0, 0, $canvas.width, $canvas.height);
 
             this.updateUI();
 
@@ -803,9 +827,13 @@ define(function(require, exports, module) {
                     break;
                 case VirtualKey.VK_RETURN:
                     if (event.altKey) {
-                        // TODO toggleFullscreen();
+                        // TODO toggle full screen
                     } else {
-                        seq.push('\n');
+                        seq.push('\r');
+
+                        if ($state.lnmode) {
+                            seq.push('\n');
+                        }
                     }
                     break;
                 case VirtualKey.VK_ESCAPE:
@@ -984,7 +1012,13 @@ define(function(require, exports, module) {
                     $resize(event);
                 }
 
-                this.measureLayout(function(cols, rows) {
+                $this.measureLayout(function(cols, rows) {
+                    if (rows > $this.lines) {
+                        $canvas.resize(cols, rows);
+                    } else {
+                        $canvas.resize(cols, Math.max(rows, $row));
+                    }
+
                     $connection.emit('terminal.resize', {
                         cols : cols,
                         rows : rows,

@@ -76,22 +76,28 @@ define(function(require, exports, module) {
             $matrix.width = width;
             $matrix.height = height;
 
-            for (var y = $height; y < height; y++) {
-                var line = $lines[y] = document.createElement('DIV');
-                var text = document.createTextNode('');
+            if (height > $height) {
+                for (var y = $height; y < height; y++) {
+                    var line = $lines[y] = document.createElement('DIV');
+                    var text = document.createTextNode('');
 
-                for (var x = 0; x < width; x++) {
-                    text.appendData(' ');
-                    $matrix.set(x, y, {
-                        data : ' ',
-                        dom  : text,
-                        left : x,
-                        right : width - x - 1,
-                    });
+                    for (var x = 0; x < width; x++) {
+                        text.appendData(' ');
+                        $matrix.set(x, y, {
+                            data : ' ',
+                            dom  : text,
+                            left : x,
+                            right : width - x - 1,
+                        });
+                    }
+
+                    line.appendChild(text);
+                    $holder.appendChild(line);
                 }
-
-                line.appendChild(text);
-                $holder.appendChild(line);
+            } else {
+                for (var y = height; y < $height; y++) {
+                    $holder.removeChild($holder.lastChild);
+                }
             }
 
             this.marginTop = 1;
