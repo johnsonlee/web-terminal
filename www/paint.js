@@ -20,6 +20,9 @@ define(function(require, exports, module) {
             'font-weight' : {
                 'default' : 'normal',
             },
+            'text-decoration' : {
+                'default' : 'none',
+            }
         };
 
         for (var i in $style) {
@@ -82,6 +85,15 @@ define(function(require, exports, module) {
             }
         });
 
+        Object.defineProperty(this, 'text-decoration', {
+            get : function() {
+                return $style['text-decoration'].value || $style['text-decoration']['default'];
+            },
+            set : function(decoration) {
+                $style['text-decoration'].value = decoration;
+            }
+        });
+
         /**
          * Test whether the specified style of this paint is default 
          * 
@@ -128,6 +140,7 @@ define(function(require, exports, module) {
             'font-weight'      : this['font-weight'],
             'font-family'      : this['font-family'],
             'font-size'        : this['font-size'],
+            'text-decoration'  : this['text-decoration'],
         });
     };
 
@@ -181,6 +194,10 @@ define(function(require, exports, module) {
 
             if (!this.isDefault('background-color')) {
                 styles.push('background-color:' + this['background-color'][bold ? 1 : 0]);
+            }
+
+            if (!this.isDefault('text-decoration')) {
+                styles.push('text-decoration:' + this['text-decoration']);
             }
         }
 

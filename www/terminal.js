@@ -277,18 +277,25 @@ define(function(require, exports, module) {
              * performs a scroll-up.
              */
             'LF' : function() {
+                var row = $row + 1;
                 var height = $canvas.height;
-
-                if ($row + 1 > $canvas.height) {
-                    $canvas.appendLine();
-                    $canvas.scrollOut(height);
-                    $terminal.scrollTop = $terminal.scrollHeight;
-                }
 
                 this.moveCursorTo(Math.min($row + 1, height), 1);
 
-                if ($row > $canvas.marginBottom) {
+                if (row > $canvas.marginBottom) {
                     $canvas.scrollUp($row - 1, 1);
+                } else {
+                    if ($state.alternateMode) {
+                        if ($row > height) {
+                            $canvas.scrollUp($row - 1, 1);
+                        }
+                    } else {
+                        if (row > height) {
+                            $canvas.appendLine();
+                            $canvas.scrollOut(height);
+                            $terminal.scrollTop = $terminal.scrollHeight;
+                        }
+                    }
                 }
             },
 
@@ -379,6 +386,9 @@ define(function(require, exports, module) {
                         break;
                     case 1:
                         $paint['font-weight'] = 'bold';
+                        break;
+                    case 4:
+                        $paint['text-decoration'] = 'underline';
                         break;
                     case 7:
                         $paint['reverse-video'] = true;

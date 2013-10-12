@@ -947,7 +947,7 @@ define(function(require, exports, module) {
                 prerenderSingularParam(token, /\[(\d+)G/, 1);
                 break;
             case 'CUP':
-                prerenderMultipleParams(token, /\[((\d+)?(;\d+)*)H$/, [1, 1]);
+                prerenderMultipleParams(token, /\[([^H]+)H$/, [1, 1]);
                 break;
             case 'CHT':
                 prerenderSingularParam(token, /\[(\d+)I/, 1);
@@ -1133,7 +1133,7 @@ define(function(require, exports, module) {
         function prerenderMultipleParams(token, pattern, defvals) {
             var matches = token.image.match(pattern);
 
-            if (matches) {
+            if (matches && matches[1].length) {
                 token.values = [];
 
                 matches = matches[1].split(';');

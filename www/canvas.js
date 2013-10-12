@@ -302,9 +302,14 @@ define(function(require, exports, module) {
                 });
             }
 
-            entry = this.matrix.get(0, this.marginBottom - 1);
-            this.matrix.data.splice(this.marginBottom - 1, 0, row);
-            this.holder.insertBefore(line, entry.dom.parentNode);
+            if (this.marginBottom - 1 >= this.height) {
+                this.matrix.data.push(row);
+                this.holder.appendChild(line);
+            } else {
+                entry = this.matrix.get(0, this.marginBottom - 1);
+                this.matrix.data.splice(this.marginBottom - 1, 0, row);
+                this.holder.insertBefore(line, entry.dom.parentNode);
+            }
         }
     };
 
