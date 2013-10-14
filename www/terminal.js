@@ -1004,7 +1004,7 @@ define(function(require, exports, module) {
             $terminal.focus();
 
             window.on('beforeunload', function(event) {
-                // TODO
+                return 'Terminal is going to exit';
             }).on('unload', function(event) {
                 $this.exit();
             }).on('resize', function(event) {
