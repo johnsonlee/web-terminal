@@ -1,0 +1,11 @@
+<html>
+    <head>
+        <script>
+            chrome.browserAction.onClicked.addListener(function(tab) {
+                chrome.tabs.create({
+                    url: 'http://localhost:3000',
+                });
+            });
+        </script>
+    </head>
+</html>

@@ -10,7 +10,6 @@ var express = require('express')
   , connect = require('connect')
   , pty = require('pty.js')
   , socket = require('socket.io')
-  , routes = require('./routes')
   , terminal = require('./routes/terminal');
 
 var app = express();
@@ -35,8 +34,7 @@ app.configure(function() {
     app.use(express.errorHandler());
 });
 
-app.get('/', routes.index);
-app.get('/terminal', terminal.index);
+app.get('/', terminal.index);
 
 var httpServer = http.createServer(app);
 var socketManager = socket.listen(httpServer);

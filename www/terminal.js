@@ -691,6 +691,7 @@ define(function(require, exports, module) {
                 $this.updateUI();
             }).on('terminal.exit', function() {
                 $this.inactive();
+                window.close();
             });
 
             $cursor.setAttribute('class', 'cursor');
@@ -793,10 +794,12 @@ define(function(require, exports, module) {
             .on('blur')
             .on('focus')
             .on('scroll')
+            .on('keydown')
             .on('keypress')
             .on('mousewheel');
 
             window
+            .on('beforeunload')
             .on('unload')
             .on('resize', $resize);
 

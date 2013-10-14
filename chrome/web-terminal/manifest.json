@@ -1,0 +1,24 @@
+{
+  "name"        : "Web Terminal",
+  "version"     : "1.0",
+  "description" : "Web terminal",
+
+  "icons" : {
+    "16"  : "icons/16/terminal.png",
+    "48"  : "icons/48/terminal.png",
+    "128" : "icons/128/terminal.png"
+  },
+
+  "background" : {
+    "page" : "background.html"
+  },
+
+  "browser_action"  : {
+    "default_icon"  : "icons/48/terminal.png",
+    "default_title" : "Web Terminal"
+  },
+
+  "permissions" : [
+    "tabs"
+  ]
+}
