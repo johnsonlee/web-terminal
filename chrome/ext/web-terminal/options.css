@@ -1,0 +1,37 @@
+* {
+    font-family: Ubuntu, Segoe, 'Lucida Grande', sans-serif;
+    font-size: 10pt;
+    color: #303942;
+}
+
+html {
+    margin: 12px;
+}
+
+header h1 {
+    font-size: 14pt;
+    margin: 12px 0;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #efefef;
+}
+
+dl dt {
+    font-size: 12pt;
+    font-weight: bold;
+    line-height: 30px;
+}
+
+dl dd {
+    line-height: 35px;
+    margin-bottom: 8px;
+}
+
+dl dd select,
+dl dd input[type="text"],
+dl dd input[type="button"] {
+    height: 25px;
+    border-radius: 5px;
+    padding: 0 5px;
+    border: 1px solid #cccccc;
+}
+

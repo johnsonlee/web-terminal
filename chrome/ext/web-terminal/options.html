@@ -1,0 +1,25 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="options.css" />
+        <script src="require.js" data-main="options"></script>
+    </head>
+    <body>
+        <header>
+            <h1>Web Terminal Configuration</h1>
+        </header>
+        <dl>
+            <dt>Protocol:</dt>
+            <dd>
+                <select name="protocol">
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                </select>
+            </dd>
+            <dt>Host:</dt>
+            <dd><input type="text" name="host" /></dd>
+            <dt>Port:</dt>
+            <dd><input type="text" name="port" /></dd>
+        </dl>
+        <input id="btnAdd" type="button" value="Add" />
+    </body>
+</head>

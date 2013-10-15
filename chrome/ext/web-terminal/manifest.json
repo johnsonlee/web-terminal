@@ -11,17 +11,21 @@
     "128" : "icons/128/terminal.png"
   },
 
-  "background" : {
+  /*"background" : {
     "scripts" : ["background.js"],
     "persistent" : false
-  },
+  },*/
 
   "browser_action"  : {
     "default_icon"  : "icons/48/terminal.png",
-    "default_title" : "Web Terminal"
+    "default_title" : "Web Terminal",
+    "default_popup" : "popup.html"
   },
 
+  "options_page" : "options.html",
+
   "permissions" : [
-    "tabs"
+    "tabs",
+    "storage"
   ]
 }

@@ -1,0 +1,21 @@
+* {
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 10pt;
+    box-sizing: border-box;
+}
+
+body {
+    margin: 15px;
+}
+
+ol > li > a {
+    color: #354d4d;
+    font-size: 11pt;
+    line-height: 25px;
+    text-decoration: none;
+}
+
+ol > li > a:hover {
+    color: #4083c6;
+    text-decoration: underline;
+}
