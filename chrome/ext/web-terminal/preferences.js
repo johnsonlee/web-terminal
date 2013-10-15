@@ -5,7 +5,19 @@ define(function(require, exports, module) {
     };
 
     module.exports.add = function(entry, callback) {
-        chrome.storage.local.set(entry, callback);
+        chrome.storage.local.set(entry, function() {
+            if ('function' === typeof callback) {
+                callback(chrome.runtime.lastError);
+            }
+        });
+    };
+
+    module.exports.remove = function(keys, callback) {
+        chrome.storage.local.remove(keys, function() {
+            if ('function' === typeof callback) {
+                callback(chrome.runtime.lastError);
+            }
+        });
     };
 
 });

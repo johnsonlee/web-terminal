@@ -8,8 +8,13 @@ define(function(require, exports, module) {
     var txtPort = document.getElementsByName('port')[0];
 
     btnAdd.addEventListener('click', function(event) {
+        if (/^\s*$/.test(txtHost.value)) {
+            return;
+        }
+
         var item = {};
-        var key = cmbProtocol.value + '://' + txtHost.value + (txtPort.value ? ':' + txtPort.value : '');
+        var key = cmbProtocol.value + '://' + txtHost.value
+                + (/^\s*$/.test(txtPort.value) ? '' : ':' + txtPort.value);
 
         item[key] = {
             protocol : cmbProtocol.value,
@@ -17,6 +22,8 @@ define(function(require, exports, module) {
             port     : txtPort.value,
         };
 
-        preferences.add(item);
+        preferences.add(item, function() {
+            console.info('Save ' + key + ' success.');
+        });
     });
 });

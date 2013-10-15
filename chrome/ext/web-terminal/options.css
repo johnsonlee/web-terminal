@@ -15,6 +15,10 @@ header h1 {
     border-bottom: 1px solid #efefef;
 }
 
+dl {
+    margin-bottom: 20px;
+}
+
 dl dt {
     font-size: 12pt;
     font-weight: bold;
@@ -27,11 +31,14 @@ dl dd {
 }
 
 dl dd select,
-dl dd input[type="text"],
-dl dd input[type="button"] {
+dl dd input[type="text"] {
     height: 25px;
     border-radius: 5px;
     padding: 0 5px;
     border: 1px solid #cccccc;
+}
+
+dl + input[type="button"] {
+    padding: 3px 20px;
 }
 
