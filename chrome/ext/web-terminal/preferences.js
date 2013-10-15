@@ -1,11 +1,11 @@
 define(function(require, exports, module) {
 
     module.exports.loadAll = function(callback) {
-        chrome.storage.local.get(null, callback);
+        chrome.storage.sync.get(null, callback);
     };
 
     module.exports.add = function(entry, callback) {
-        chrome.storage.local.set(entry, function() {
+        chrome.storage.sync.set(entry, function() {
             if ('function' === typeof callback) {
                 callback(chrome.runtime.lastError);
             }
@@ -13,7 +13,7 @@ define(function(require, exports, module) {
     };
 
     module.exports.remove = function(keys, callback) {
-        chrome.storage.local.remove(keys, function() {
+        chrome.storage.sync.remove(keys, function() {
             if ('function' === typeof callback) {
                 callback(chrome.runtime.lastError);
             }
