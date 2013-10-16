@@ -970,6 +970,10 @@ define(function(require, exports, module) {
                 $connection.emit('terminal.input', {
                     message : String.fromCharCode(event.keyCode)
                 });
+
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
             }).on('mousedown', function(event) {
                 if ($state.x11MouseTrackable) {
                     // TODO
